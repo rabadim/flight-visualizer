@@ -1,3 +1,5 @@
+// Part 1: Globals, Constants, and Initialization
+
 let map;
 let logbooks = { 'Logbook 1': { flights: [], stats: {} } };
 let currentLogbook = 'Logbook 1';
@@ -133,21 +135,24 @@ function showFileError(message, category = 'general') {
     const fileError = document.getElementById('file-error');
     let detailedMessage = message;
 
-    if (category === 'file-format') {
-        detailedMessage += ' Please check the file type and ensure it is a CSV, PDF, TXT, JPG, PNG, or JPEG.';
-    } else if (category === 'parsing') {
-        detailedMessage += ' Ensure your logbook has valid FROM and TO columns or try mapping them manually.';
-    } else if (category === 'airport-code') {
-        detailedMessage += ' These codes may be aircraft types, simulator codes, or missing airports. Add them using the form below if they are airports.';
-    } else if (category === 'date-parsing') {
-        detailedMessage += ' Please ensure dates are in a supported format like DD.MMM.YY, MM/DD/YYYY, or YYYY-MM-DD.';
+    switch (category) {
+        case 'file-format':
+            detailedMessage += ' Please check the file type and ensure it is a CSV, PDF, TXT, JPG, PNG, or JPEG.';
+            break;
+        case 'parsing':
+            detailedMessage += ' Ensure your logbook has valid FROM and TO columns or try mapping them manually.';
+            break;
+        case 'airport-code':
+            detailedMessage += ' These codes may be aircraft types, simulator codes, or missing airports. Add them using the form below if they are airports.';
+            break;
+        case 'date-parsing':
+            detailedMessage += ' Please ensure dates are in a supported format like DD.MMM.YY, MM/DD/YYYY, or YYYY-MM-DD.';
+            break;
     }
 
     fileError.querySelector('p').textContent = detailedMessage;
     fileError.classList.remove('hidden');
-    setTimeout(() => {
-        fileError.classList.add('hidden');
-    }, ERROR_TIMEOUT);
+    setTimeout(() => fileError.classList.add('hidden'), ERROR_TIMEOUT);
 }
 
 function showToast(message) {
@@ -227,12 +232,12 @@ window.addEventListener('load', () => {
 
     window.addEventListener('resize', updateZoomOnResize);
 
-    document.getElementById('map-style').addEventListener('change', function () {
-        currentMapStyle = this.value;
+    document.getElementById('map-style').addEventListener('change', e => {
+        currentMapStyle = e.target.value;
         updateMapStyle(currentMapStyle);
     });
 
-    document.getElementById('theme-toggle').addEventListener('click', function () {
+    document.getElementById('theme-toggle').addEventListener('click', () => {
         document.body.classList.toggle('dark-mode');
         isDarkMode = document.body.classList.contains('dark-mode');
         this.querySelector('span:not([data-icon])').textContent = isDarkMode ? 'Toggle Light Mode' : 'Toggle Dark Mode';
@@ -262,70 +267,38 @@ window.addEventListener('load', () => {
 
     let isDownloading = false;
 
-    menuToggle.addEventListener('click', () => {
+    const toggleMenu = () => {
         menuOverlay.classList.toggle('translate-x-full');
         menuBackdrop.classList.toggle('hidden');
-        const isMenuOpen = !menuOverlay.classList.contains('translate-x-full');
-        const menuIconOpen = document.getElementById('menu-icon-open');
-        const menuIconClose = document.getElementById('menu-icon-close');
-        if (isMenuOpen) {
-            menuIconOpen.classList.add('hidden');
-            menuIconClose.classList.remove('hidden');
-            menuToggle.setAttribute('aria-label', 'Close Menu');
-        } else {
-            menuIconOpen.classList.remove('hidden');
-            menuIconClose.classList.add('hidden');
-            menuToggle.setAttribute('aria-label', 'Open Menu');
-        }
-    });
+        const isOpen = !menuOverlay.classList.contains('translate-x-full');
+        document.getElementById('menu-icon-open').classList.toggle('hidden', isOpen);
+        document.getElementById('menu-icon-close').classList.toggle('hidden', !isOpen);
+        menuToggle.setAttribute('aria-label', isOpen ? 'Close Menu' : 'Open Menu');
+    };
 
-    menuBackdrop.addEventListener('click', () => {
-        menuOverlay.classList.add('translate-x-full');
-        menuBackdrop.classList.add('hidden');
-        const menuIconOpen = document.getElementById('menu-icon-open');
-        const menuIconClose = document.getElementById('menu-icon-close');
-        menuIconOpen.classList.remove('hidden');
-        menuIconClose.classList.add('hidden');
-        menuToggle.setAttribute('aria-label', 'Open Menu');
-    });
+    menuToggle.addEventListener('click', toggleMenu);
+    menuBackdrop.addEventListener('click', toggleMenu);
 
-    document.getElementById('toggle-form-btn').addEventListener('click', function () {
-        const formContainer = document.getElementById('flight-form-container');
-        formContainer.classList.toggle('hidden');
-        this.classList.toggle('expanded');
-        this.querySelector('span[data-chevron="form"]').classList.toggle('expanded');
-        this.querySelector('.text-label').textContent = formContainer.classList.contains('hidden') ? 'Add Flight' : 'Hide Form';
-    });
+    const toggleBtn = (id, containerId, chevron, openText, closeText) => {
+        document.getElementById(id).addEventListener('click', function () {
+            const container = document.getElementById(containerId);
+            container.classList.toggle('hidden');
+            this.classList.toggle('expanded');
+            this.querySelector(`span[data-chevron="${chevron}"]`).classList.toggle('expanded');
+            this.querySelector('.text-label').textContent = container.classList.contains('hidden') ? openText : closeText;
+        });
+    };
 
-    document.getElementById('toggle-logbook-btn').addEventListener('click', function () {
-        const logbookContainer = document.getElementById('logbook-upload-container');
-        logbookContainer.classList.toggle('hidden');
-        this.classList.toggle('expanded');
-        this.querySelector('span[data-chevron="logbook"]').classList.toggle('expanded');
-        this.querySelector('.text-label').textContent = logbookContainer.classList.contains('hidden') ? 'Upload Logbook' : 'Hide Logbook Upload';
-    });
+    toggleBtn('toggle-form-btn', 'flight-form-container', 'form', 'Add Flight', 'Hide Form');
+    toggleBtn('toggle-logbook-btn', 'logbook-upload-container', 'logbook', 'Upload Logbook', 'Hide Logbook Upload');
+    toggleBtn('toggle-date-filter-btn', 'date-filter-container', 'date-filter', 'Filter by Date Range', 'Hide Date Filter');
+    toggleBtn('toggle-filter-flights-btn', 'filter-flights-container', 'filter-flights', 'Filter Flights', 'Hide Flight Filters');
 
-    document.getElementById('toggle-date-filter-btn').addEventListener('click', function () {
-        const dateFilterContainer = document.getElementById('date-filter-container');
-        dateFilterContainer.classList.toggle('hidden');
-        this.classList.toggle('expanded');
-        this.querySelector('span[data-chevron="date-filter"]').classList.toggle('expanded');
-        this.querySelector('span:not([data-chevron])').textContent = dateFilterContainer.classList.contains('hidden') ? 'Filter by Date Range' : 'Hide Date Filter';
-    });
-
-    document.getElementById('toggle-filter-flights-btn').addEventListener('click', function () {
-        const filterFlightsContainer = document.getElementById('filter-flights-container');
-        filterFlightsContainer.classList.toggle('hidden');
-        this.classList.toggle('expanded');
-        this.querySelector('span[data-chevron="filter-flights"]').classList.toggle('expanded');
-        this.querySelector('span:not([data-chevron])').textContent = filterFlightsContainer.classList.contains('hidden') ? 'Filter Flights' : 'Hide Flight Filters';
-    });
-
-    document.getElementById('submit-flight').addEventListener('click', function (event) {
+    document.getElementById('submit-flight').addEventListener('click', event => {
         event.preventDefault();
         const departure = document.getElementById('departure').value.toUpperCase();
         const arrival = document.getElementById('arrival').value.toUpperCase();
-        const notes = document.getElementById('flight-notes') ? document.getElementById('flight-notes').value : '';
+        const notes = document.getElementById('flight-notes')?.value || '';
 
         const depAirport = getAirport(departure);
         const arrAirport = getAirport(arrival);
@@ -337,7 +310,7 @@ window.addEventListener('load', () => {
                 date: 'N/A',
                 distance: calculateDistance(depAirport.coords, arrAirport.coords),
                 duration: 0,
-                notes: notes,
+                notes,
                 aircraftType: 'Unknown',
                 registration: 'Unknown',
                 crossCountry: 0,
@@ -356,9 +329,7 @@ window.addEventListener('load', () => {
 
         document.getElementById('departure').value = '';
         document.getElementById('arrival').value = '';
-        if (document.getElementById('flight-notes')) {
-            document.getElementById('flight-notes').value = '';
-        }
+        document.getElementById('flight-notes')?.value && (document.getElementById('flight-notes').value = '');
     });
 
     document.getElementById('clear-flights-btn').addEventListener('click', () => {
@@ -366,11 +337,7 @@ window.addEventListener('load', () => {
         airportFrequency = {};
         routeFrequency.clear();
         missingAirports.clear();
-        totalFlightTime = 0;
-        totalCrossCountry = 0;
-        totalNight = 0;
-        totalSolo = 0;
-        totalActualIFR = 0;
+        totalFlightTime = totalCrossCountry = totalNight = totalSolo = totalActualIFR = 0;
         drawFlights();
     });
 
@@ -398,29 +365,24 @@ window.addEventListener('load', () => {
 
     document.getElementById('export-flights-btn').addEventListener('click', () => {
         const flights = logbooks[currentLogbook].flights;
-        if (flights.length === 0) {
-            showFileError('No flights to export.', 'general');
-            return;
-        }
+        if (flights.length === 0) return showFileError('No flights to export.', 'general');
 
         const csv = [
             ['Departure', 'Arrival', 'Date', 'Distance (km)', 'Duration (hrs)', 'Aircraft Type', 'Registration', 'Cross-Country (hrs)', 'Night (hrs)', 'Solo (hrs)', 'Actual IFR (hrs)', 'Notes'].join(','),
-            ...flights.map(flight =>
-                [
-                    flight.codes[0],
-                    flight.codes[1],
-                    flight.date,
-                    flight.distance.toFixed(2),
-                    flight.duration.toFixed(2),
-                    flight.aircraftType,
-                    flight.registration,
-                    flight.crossCountry.toFixed(2),
-                    flight.night.toFixed(2),
-                    flight.solo.toFixed(2),
-                    flight.actualIFR.toFixed(2),
-                    `"${flight.notes.replace(/"/g, '""')}"`
-                ].join(',')
-            )
+            ...flights.map(flight => [
+                flight.codes[0],
+                flight.codes[1],
+                flight.date,
+                flight.distance.toFixed(2),
+                flight.duration.toFixed(2),
+                flight.aircraftType,
+                flight.registration,
+                flight.crossCountry.toFixed(2),
+                flight.night.toFixed(2),
+                flight.solo.toFixed(2),
+                flight.actualIFR.toFixed(2),
+                `"${flight.notes.replace(/"/g, '""')}"`
+            ].join(','))
         ].join('\n');
 
         const blob = new Blob([csv], { type: 'text/csv' });
@@ -460,32 +422,22 @@ window.addEventListener('load', () => {
 
         if (departureFilter) {
             const depAirport = getAirport(departureFilter);
-            if (depAirport) {
-                filteredFlights = filteredFlights.filter(flight => flight.codes[0] === depAirport.iata);
-            }
+            depAirport && (filteredFlights = filteredFlights.filter(flight => flight.codes[0] === depAirport.iata));
         }
         if (arrivalFilter) {
             const arrAirport = getAirport(arrivalFilter);
-            if (arrAirport) {
-                filteredFlights = filteredFlights.filter(flight => flight.codes[1] === arrAirport.iata);
-            }
+            arrAirport && (filteredFlights = filteredFlights.filter(flight => flight.codes[1] === arrAirport.iata));
         }
 
-        if (sortOption === 'date-asc') {
-            filteredFlights.sort((a, b) => new Date(a.date) - new Date(b.date));
-        } else if (sortOption === 'date-desc') {
-            filteredFlights.sort((a, b) => new Date(b.date) - new Date(a.date));
-        } else if (sortOption === 'distance-asc') {
-            filteredFlights.sort((a, b) => a.distance - b.distance);
-        } else if (sortOption === 'distance-desc') {
-            filteredFlights.sort((a, b) => b.distance - a.distance);
-        } else if (sortOption === 'frequency-desc') {
-            filteredFlights.sort((a, b) => {
-                const freqA = routeFrequency.get(`${a.codes[0]}-${a.codes[1]}`) || 0;
-                const freqB = routeFrequency.get(`${b.codes[0]}-${b.codes[1]}`) || 0;
-                return freqB - freqA;
-            });
-        }
+        const sortFunctions = {
+            'date-asc': (a, b) => new Date(a.date) - new Date(b.date),
+            'date-desc': (a, b) => new Date(b.date) - new Date(a.date),
+            'distance-asc': (a, b) => a.distance - b.distance,
+            'distance-desc': (a, b) => b.distance - a.distance,
+            'frequency-desc': (a, b) => (routeFrequency.get(`${b.codes[0]}-${b.codes[1]}`) || 0) - (routeFrequency.get(`${a.codes[0]}-${a.codes[1]}`) || 0),
+        };
+
+        if (sortFunctions[sortOption]) filteredFlights.sort(sortFunctions[sortOption]);
 
         const originalFlights = logbooks[currentLogbook].flights;
         logbooks[currentLogbook].flights = filteredFlights;
@@ -502,39 +454,36 @@ window.addEventListener('load', () => {
         const lon = parseFloat(document.getElementById('missing-airport-lon').value);
         const name = document.getElementById('missing-airport-name').value || `Custom Airport (${iata})`;
 
-        if (iata && /^[A-Z]{3}$/.test(iata) && icao && /^[A-Z]{4}$/.test(icao) && country && /^[A-Z]{2}$/.test(country) && !isNaN(lat) && !isNaN(lon)) {
+        const isValidIATA = /^[A-Z]{3}$/.test(iata);
+        const isValidICAO = /^[A-Z]{4}$/.test(icao);
+        const isValidCountry = /^[A-Z]{2}$/.test(country);
+        const isValidIdentifier = identifier ? /^[A-Z]{3,4}$/.test(identifier) : true;
+
+        if (isValidIATA && isValidICAO && isValidCountry && isValidIdentifier && !isNaN(lat) && !isNaN(lon)) {
             const airportId = airportsData.airports.length;
             const newAirport = {
                 id: airportId,
-                iata: iata,
-                icao: icao,
-                identifier: identifier && /^[A-Z]{3,4}$/.test(identifier) ? identifier : null,
-                country: country,
+                iata,
+                icao,
+                identifier: isValidIdentifier ? identifier : null,
+                country,
                 coords: [lat, lon],
-                name: name
+                name
             };
             airportsData.airports.push(newAirport);
             airportsData.code_to_airport_id[iata] = airportId;
             airportsData.code_to_airport_id[icao] = airportId;
             if (identifier) airportsData.code_to_airport_id[identifier] = airportId;
-            validAirportCodes.add(iata);
-            validAirportCodes.add(icao);
+            validAirportCodes.add(iata).add(icao);
             if (identifier) validAirportCodes.add(identifier);
-            missingAirports.delete(iata);
-            missingAirports.delete(icao);
+            missingAirports.delete(iata).delete(icao);
             if (identifier) missingAirports.delete(identifier);
             showFileError(`Added airport ${iata} (${name}) at (${lat}, ${lon}). Re-upload your logbook to include flights with this airport.`, 'general');
         } else {
             showFileError('Please provide valid IATA (3 letters), ICAO (4 letters), country code (2 letters), latitude, longitude, and optionally an identifier (3-4 letters).', 'general');
         }
 
-        document.getElementById('missing-airport-iata').value = '';
-        document.getElementById('missing-airport-icao').value = '';
-        document.getElementById('missing-airport-identifier').value = '';
-        document.getElementById('missing-airport-country').value = '';
-        document.getElementById('missing-airport-lat').value = '';
-        document.getElementById('missing-airport-lon').value = '';
-        document.getElementById('missing-airport-name').value = '';
+        ['missing-airport-iata', 'missing-airport-icao', 'missing-airport-identifier', 'missing-airport-country', 'missing-airport-lat', 'missing-airport-lon', 'missing-airport-name'].forEach(id => document.getElementById(id).value = '');
     });
 
     document.getElementById('toggle-missing-airport-btn').addEventListener('click', function () {
@@ -573,25 +522,14 @@ window.addEventListener('load', () => {
 
         const fileExtension = file.name.split('.').pop().toLowerCase();
         if (['csv', 'pdf', 'txt', 'jpg', 'png', 'jpeg'].includes(fileExtension)) {
-            if (fileExtension === 'csv') {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    parseCSV(e.target.result);
-                };
+            const reader = new FileReader();
+            if (fileExtension === 'csv' || fileExtension === 'txt') {
+                reader.onload = e => fileExtension === 'csv' ? parseCSV(e.target.result) : parseText(e.target.result);
                 reader.readAsText(file);
             } else if (fileExtension === 'pdf') {
                 parsePDF(file);
-            } else if (fileExtension === 'txt') {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    parseText(e.target.result);
-                };
-                reader.readAsText(file);
-            } else if (['jpg', 'png', 'jpeg'].includes(fileExtension)) {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    parseImage(e.target.result);
-                };
+            } else {
+                reader.onload = e => parseImage(e.target.result);
                 reader.readAsDataURL(file);
             }
         } else {
@@ -606,15 +544,12 @@ window.addEventListener('load', () => {
         .then(data => {
             airportsData = data;
             airportsData.code_to_airport = {};
-            Object.keys(airportsData.code_to_airport_id).forEach(code => {
-                const id = airportsData.code_to_airport_id[code];
+            Object.entries(airportsData.code_to_airport_id).forEach(([code, id]) => {
                 airportsData.code_to_airport[code] = airportsData.airports[id];
             });
             validAirportCodes = new Set(Object.keys(airportsData.code_to_airport_id));
         })
-        .catch(error => {
-            showFileError('Failed to load airport data. Please try again.', 'file-format');
-        });
+        .catch(() => showFileError('Failed to load airport data. Please try again.', 'file-format'));
 
     const editMenuBtn = document.getElementById('edit-menu-btn');
     const reorderMenuOverlay = document.getElementById('reorder-menu-overlay');
@@ -640,9 +575,7 @@ window.addEventListener('load', () => {
                 const sections = Array.from(sectionsContainer.children);
                 order.forEach(sectionId => {
                     const section = sections.find(s => s.dataset.sectionId === sectionId);
-                    if (section) {
-                        sectionsContainer.appendChild(section);
-                    }
+                    section && sectionsContainer.appendChild(section);
                 });
             }
             populateReorderList();
@@ -650,8 +583,7 @@ window.addEventListener('load', () => {
 
         function populateReorderList() {
             reorderList.innerHTML = '';
-            const sections = Array.from(sectionsContainer.children);
-            sections.forEach(section => {
+            Array.from(sectionsContainer.children).forEach(section => {
                 const sectionId = section.dataset.sectionId;
                 const sectionName = sectionsList.find(s => s.id === sectionId).name;
                 const item = document.createElement('div');
@@ -675,45 +607,35 @@ window.addEventListener('load', () => {
             localStorage.setItem('menuSectionOrder', JSON.stringify(order));
         }
 
-        editMenuBtn.addEventListener('click', () => {
-            reorderMenuOverlay.classList.add('open');
-        });
+        editMenuBtn.addEventListener('click', () => reorderMenuOverlay.classList.add('open'));
 
-        closeReorderMenuBtn.addEventListener('click', () => {
-            reorderMenuOverlay.classList.remove('open');
-        });
+        closeReorderMenuBtn.addEventListener('click', () => reorderMenuOverlay.classList.remove('open'));
 
         let draggedItem = null;
 
-        reorderList.addEventListener('dragstart', (e) => {
+        reorderList.addEventListener('dragstart', e => {
             draggedItem = e.target.closest('.reorder-item');
-            if (draggedItem) {
-                draggedItem.classList.add('dragging');
-            }
+            draggedItem?.classList.add('dragging');
         });
 
         reorderList.addEventListener('dragend', () => {
             if (draggedItem) {
                 draggedItem.classList.remove('dragging');
-                draggedItem = null;
                 const reorderedItems = Array.from(reorderList.children);
                 const sections = Array.from(sectionsContainer.children);
                 reorderedItems.forEach(item => {
                     const sectionId = item.dataset.sectionId;
                     const section = sections.find(s => s.dataset.sectionId === sectionId);
-                    if (section) {
-                        sectionsContainer.appendChild(section);
-                    }
+                    section && sectionsContainer.appendChild(section);
                 });
                 saveSectionOrder();
+                draggedItem = null;
             }
         });
 
-        reorderList.addEventListener('dragover', (e) => {
-            e.preventDefault();
-        });
+        reorderList.addEventListener('dragover', e => e.preventDefault());
 
-        reorderList.addEventListener('drop', (e) => {
+        reorderList.addEventListener('drop', e => {
             e.preventDefault();
             if (!draggedItem) return;
             const targetItem = e.target.closest('.reorder-item');
@@ -731,6 +653,8 @@ window.addEventListener('load', () => {
         loadSectionOrder();
     }
 });
+
+// Part 2: Functions and Parsing Logic
 
 const headerKeywords = [
     'DATE', 'AIRCRAFT', 'FROM', 'TO', 'ROUTE', 'TYPE', 'REGISTRATION',
@@ -891,94 +815,57 @@ function calculateDistance(coords1, coords2) {
 
 // Detect and validate dates in multiple formats
 function findDateInRow(row) {
-    const dateRegexMMM = /^\d{1,2}\.\w{3}\.\d{2}$/; // e.g., 20.Apr.19
-    const dateRegexSlash1 = /^\d{1,2}\/\d{1,2}\/\d{4}$/; // e.g., 04/20/2019
-    const dateRegexDash = /^\d{4}-\d{1,2}-\d{1,2}$/; // e.g., 2019-04-20
-    const dateRegexSlash2 = /^\d{4}\/\d{1,2}\/\d{1,2}$/; // e.g., 2019/04/20
-    const dateRegexDMY = /^\d{1,2}-\d{1,2}-\d{4}$/; // e.g., 20-04-2019
-    const dateRegexMMMDDYYYY = /^(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},\s+\d{4}$/i; // e.g., Apr 20, 2019
-    const dateRegexMMDDYY = /^\d{1,2}\/\d{1,2}\/\d{2}$/; // e.g., 4/20/19
-    const dateRegexMMDDYYDash = /^\d{1,2}-\d{1,2}-\d{2}$/; // e.g., 4-20-19
-    const dateRegexDDMMMYYYY = /^\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}$/i; // e.g., 20 Apr 2019
-    const dateRegexYYYYMMDD = /^\d{4}\.\d{1,2}\.\d{1,2}$/; // e.g., 2019.04.20
-    const dateRegexMMDDYYYY = /^\d{1,2}\.\d{1,2}\.\d{4}$/; // e.g., 04.20.2019
-
-    console.log(`[findDateInRow] Scanning row: ${row.join(' | ')}`);
-
-    for (const cell of row) {
-        if (!cell || typeof cell !== 'string') continue; // Skip empty or non-string cells
-        let parsedDate;
-        const trimmedCell = cell.trim();
-
-        if (dateRegexMMM.test(trimmedCell)) {
-            const parts = trimmedCell.split('.');
+    const dateFormats = [
+        { regex: /^\d{1,2}\.\w{3}\.\d{2}$/, splitter: '.', parser: parts => {
             const month = parts[1].toLowerCase();
             const validMonths = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
             if (validMonths.includes(month)) {
                 const day = parts[0].padStart(2, '0');
                 const year = `20${parts[2]}`;
                 const monthNum = (validMonths.indexOf(month) + 1).toString().padStart(2, '0');
-                parsedDate = `${year}-${monthNum}-${day}`;
-                console.log(`[findDateInRow] Matched DD.MMM.YY: ${trimmedCell} -> ${parsedDate}`);
+                return `${year}-${monthNum}-${day}`;
             }
-        } else if (dateRegexSlash1.test(trimmedCell)) {
-            const parts = trimmedCell.split('/');
+        }},
+        { regex: /^\d{1,2}\/\d{1,2}\/\d{4}$/, splitter: '/', parser: parts => {
             const month = parseInt(parts[0], 10).toString().padStart(2, '0');
             const day = parseInt(parts[1], 10).toString().padStart(2, '0');
             const year = parts[2];
-            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) {
-                parsedDate = `${year}-${month}-${day}`;
-                console.log(`[findDateInRow] Matched MM/DD/YYYY: ${trimmedCell} -> ${parsedDate}`);
-            }
-        } else if (dateRegexMMDDYY.test(trimmedCell)) {
-            const parts = trimmedCell.split('/');
+            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) return `${year}-${month}-${day}`;
+        }},
+        { regex: /^\d{1,2}\/\d{1,2}\/\d{2}$/, splitter: '/', parser: parts => {
             const month = parseInt(parts[0], 10).toString().padStart(2, '0');
             const day = parseInt(parts[1], 10).toString().padStart(2, '0');
             let year = parts[2];
             year = parseInt(year, 10) < 50 ? `20${year}` : `19${year}`;
-            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) {
-                parsedDate = `${year}-${month}-${day}`;
-                console.log(`[findDateInRow] Matched MM/DD/YY: ${trimmedCell} -> ${parsedDate}`);
-            }
-        } else if (dateRegexMMDDYYDash.test(trimmedCell)) {
-            const parts = trimmedCell.split('-');
+            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) return `${year}-${month}-${day}`;
+        }},
+        { regex: /^\d{1,2}-\d{1,2}-\d{2}$/, splitter: '-', parser: parts => {
             const month = parseInt(parts[0], 10).toString().padStart(2, '0');
             const day = parseInt(parts[1], 10).toString().padStart(2, '0');
             let year = parts[2];
             year = parseInt(year, 10) < 50 ? `20${year}` : `19${year}`;
-            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) {
-                parsedDate = `${year}-${month}-${day}`;
-                console.log(`[findDateInRow] Matched MM-DD-YY: ${trimmedCell} -> ${parsedDate}`);
-            }
-        } else if (dateRegexDash.test(trimmedCell)) {
-            const parts = trimmedCell.split('-');
+            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) return `${year}-${month}-${day}`;
+        }},
+        { regex: /^\d{4}-\d{1,2}-\d{1,2}$/, splitter: '-', parser: parts => {
             const year = parts[0];
             const month = parseInt(parts[1], 10).toString().padStart(2, '0');
             const day = parseInt(parts[2], 10).toString().padStart(2, '0');
-            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) {
-                parsedDate = `${year}-${month}-${day}`;
-                console.log(`[findDateInRow] Matched YYYY-MM-DD: ${trimmedCell} -> ${parsedDate}`);
-            }
-        } else if (dateRegexSlash2.test(trimmedCell)) {
-            const parts = trimmedCell.split('/');
+            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) return `${year}-${month}-${day}`;
+        }},
+        { regex: /^\d{4}\/\d{1,2}\/\d{1,2}$/, splitter: '/', parser: parts => {
             const year = parts[0];
             const month = parseInt(parts[1], 10).toString().padStart(2, '0');
             const day = parseInt(parts[2], 10).toString().padStart(2, '0');
-            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) {
-                parsedDate = `${year}-${month}-${day}`;
-                console.log(`[findDateInRow] Matched YYYY/MM/DD: ${trimmedCell} -> ${parsedDate}`);
-            }
-        } else if (dateRegexDMY.test(trimmedCell)) {
-            const parts = trimmedCell.split('-');
+            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) return `${year}-${month}-${day}`;
+        }},
+        { regex: /^\d{1,2}-\d{1,2}-\d{4}$/, splitter: '-', parser: parts => {
             const day = parseInt(parts[0], 10).toString().padStart(2, '0');
             const month = parseInt(parts[1], 10).toString().padStart(2, '0');
             const year = parts[2];
-            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) {
-                parsedDate = `${year}-${month}-${day}`;
-                console.log(`[findDateInRow] Matched DD-MM-YYYY: ${trimmedCell} -> ${parsedDate}`);
-            }
-        } else if (dateRegexMMMDDYYYY.test(trimmedCell)) {
-            const parts = trimmedCell.match(/(\w+)\s+(\d{1,2}),\s+(\d{4})/);
+            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) return `${year}-${month}-${day}`;
+        }},
+        { regex: /^(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},\s+\d{4}$/i, splitter: null, parser: cell => {
+            const parts = cell.match(/(\w+)\s+(\d{1,2}),\s+(\d{4})/);
             if (parts) {
                 const month = parts[1].toLowerCase();
                 const validMonths = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
@@ -986,12 +873,12 @@ function findDateInRow(row) {
                     const day = parseInt(parts[2], 10).toString().padStart(2, '0');
                     const year = parts[3];
                     const monthNum = (validMonths.indexOf(month) + 1).toString().padStart(2, '0');
-                    parsedDate = `${year}-${monthNum}-${day}`;
-                    console.log(`[findDateInRow] Matched MMM DD, YYYY: ${trimmedCell} -> ${parsedDate}`);
+                    return `${year}-${monthNum}-${day}`;
                 }
             }
-        } else if (dateRegexDDMMMYYYY.test(trimmedCell)) {
-            const parts = trimmedCell.match(/(\d{1,2})\s+(\w+)\s+(\d{4})/);
+        }},
+        { regex: /^\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}$/i, splitter: null, parser: cell => {
+            const parts = cell.match(/(\d{1,2})\s+(\w+)\s+(\d{4})/);
             if (parts) {
                 const day = parseInt(parts[1], 10).toString().padStart(2, '0');
                 const month = parts[2].toLowerCase();
@@ -999,42 +886,52 @@ function findDateInRow(row) {
                 const validMonths = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
                 if (validMonths.includes(month)) {
                     const monthNum = (validMonths.indexOf(month) + 1).toString().padStart(2, '0');
-                    parsedDate = `${year}-${monthNum}-${day}`;
-                    console.log(`[findDateInRow] Matched DD MMM YYYY: ${trimmedCell} -> ${parsedDate}`);
+                    return `${year}-${monthNum}-${day}`;
                 }
             }
-        } else if (dateRegexYYYYMMDD.test(trimmedCell)) {
-            const parts = trimmedCell.split('.');
+        }},
+        { regex: /^\d{4}\.\d{1,2}\.\d{1,2}$/, splitter: '.', parser: parts => {
             const year = parts[0];
             const month = parseInt(parts[1], 10).toString().padStart(2, '0');
             const day = parseInt(parts[2], 10).toString().padStart(2, '0');
-            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) {
-                parsedDate = `${year}-${month}-${day}`;
-                console.log(`[findDateInRow] Matched YYYY.MM.DD: ${trimmedCell} -> ${parsedDate}`);
-            }
-        } else if (dateRegexMMDDYYYY.test(trimmedCell)) {
-            const parts = trimmedCell.split('.');
+            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) return `${year}-${month}-${day}`;
+        }},
+        { regex: /^\d{1,2}\.\d{1,2}\.\d{4}$/, splitter: '.', parser: parts => {
             const month = parseInt(parts[0], 10).toString().padStart(2, '0');
             const day = parseInt(parts[1], 10).toString().padStart(2, '0');
             const year = parts[2];
-            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) {
-                parsedDate = `${year}-${month}-${day}`;
-                console.log(`[findDateInRow] Matched MM.DD.YYYY: ${trimmedCell} -> ${parsedDate}`);
-            }
-        }
+            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) return `${year}-${month}-${day}`;
+        }}
+    ];
 
-        if (parsedDate) {
-            const dateObj = new Date(parsedDate);
-            if (!isNaN(dateObj.getTime())) {
-                console.log(`[findDateInRow] Found valid date: ${parsedDate} from cell: ${trimmedCell}`);
-                return parsedDate;
-            } else {
-                console.log(`[findDateInRow] Invalid date parsed: ${parsedDate} from cell: ${trimmedCell}`);
+    console.log(`[findDateInRow] Scanning row: ${row.join(' | ')}`);
+
+    for (const cell of row) {
+        if (!cell || typeof cell !== 'string') continue;
+        const trimmedCell = cell.trim();
+        for (const { regex, splitter, parser } of dateFormats) {
+            if (regex.test(trimmedCell)) {
+                let parsedDate;
+                if (splitter) {
+                    const parts = trimmedCell.split(splitter);
+                    parsedDate = parser(parts);
+                } else {
+                    parsedDate = parser(trimmedCell);
+                }
+                if (parsedDate) {
+                    const dateObj = new Date(parsedDate);
+                    if (!isNaN(dateObj.getTime())) {
+                        console.log(`[findDateInRow] Found valid date: ${parsedDate} from cell: ${trimmedCell}`);
+                        return parsedDate;
+                    } else {
+                        console.log(`[findDateInRow] Invalid date parsed: ${parsedDate} from cell: ${trimmedCell}`);
+                    }
+                }
             }
         }
     }
+
     console.log(`[findDateInRow] No valid date found in row: ${row.join(' | ')}`);
-    // Fallback to current date to avoid dropping flights
     const fallbackDate = new Date().toISOString().split('T')[0];
     console.log(`[findDateInRow] Using fallback date: ${fallbackDate}`);
     return fallbackDate;
@@ -1203,8 +1100,6 @@ function parseCSV(csvText) {
         showColumnMappingUI(rows, true, csvText);
     }
 }
-
-/////////////////////////////////////////////////////////////////////
 
 async function showColumnMappingUI(rows, isCSV = false, csvText = null) {
     const previewContainer = document.getElementById('logbook-preview');
@@ -1997,97 +1892,52 @@ function parseLinesAsText(text) {
 
 // Draw flights and markers
 function drawFlights(autoOpenPopups = false) {
-    map.eachLayer(layer => {
-        if (layer instanceof L.Marker) {
-            map.removeLayer(layer);
-        }
-    });
+    map.eachLayer(layer => layer instanceof L.Marker && map.removeLayer(layer));
 
     const bounds = L.latLngBounds();
     const uniqueAirports = new Set();
     let totalDistance = 0;
     const airportVisits = new Map();
 
-    let displayFlights = logbooks[currentLogbook].flights;
-
-    if (startDate || endDate) {
-        displayFlights = displayFlights.filter(flight => {
+    let displayFlights = logbooks[currentLogbook].flights.filter(flight => {
+        if (!showLocalFlights && flight.isLocal) return false;
+        if (startDate || endDate) {
             const flightDate = new Date(flight.date);
             const start = startDate ? new Date(startDate) : new Date('1900-01-01');
             const end = endDate ? new Date(endDate) : new Date('9999-12-31');
             return flightDate >= start && flightDate <= end;
+        }
+        return true;
+    });
+
+    displayFlights.forEach(({ depAirport, arrAirport, codes: [fromCode, toCode], date, distance, isLocal }) => {
+        if (!depAirport || !arrAirport) return console.warn(`Skipping flight: ${fromCode} to ${toCode}`);
+
+        [fromCode, toCode].forEach((code, idx) => {
+            if (!airportVisits.has(code)) {
+                const airport = idx === 0 ? depAirport : arrAirport;
+                airportVisits.set(code, { coords: airport.coords, dates: [], visits: 0, name: getAirportName(airport) });
+            }
+            const visits = airportVisits.get(code);
+            visits.visits++;
+            if (date && date !== 'N/A' && !isNaN(new Date(date).getTime())) visits.dates.push(date);
+            uniqueAirports.add(code);
         });
-    }
 
-    displayFlights.forEach(flight => {
-        const fromAirport = flight.depAirport;
-        const toAirport = flight.arrAirport;
-        const fromCode = flight.codes[0];
-        const toCode = flight.codes[1];
-
-        if (!fromAirport || !toAirport) {
-            console.warn(`Skipping flight with missing airports: ${fromCode} to ${toCode}`);
-            return;
-        }
-
-        if (!showLocalFlights && flight.isLocal) {
-            return;
-        }
-
-        if (!airportVisits.has(fromCode)) {
-            airportVisits.set(fromCode, { coords: fromAirport.coords, dates: [], visits: 0, name: getAirportName(fromAirport) });
-        }
-        if (!airportVisits.has(toCode)) {
-            airportVisits.set(toCode, { coords: toAirport.coords, dates: [], visits: 0, name: getAirportName(toAirport) });
-        }
-
-        airportVisits.get(fromCode).visits++;
-        airportVisits.get(toCode).visits++;
-        const flightDate = flight.date && flight.date !== 'N/A' && !isNaN(new Date(flight.date).getTime()) ? flight.date : null;
-        if (flightDate) {
-            airportVisits.get(fromCode).dates.push(flightDate);
-            airportVisits.get(toCode).dates.push(flightDate);
-            console.log(`Added date ${flightDate} for airports ${fromCode} and ${toCode}`);
-        } else {
-            console.warn(`Invalid or missing date for flight ${fromCode} to ${toCode}: ${flight.date}`);
-        }
-
-        totalDistance += flight.distance;
-        uniqueAirports.add(fromCode);
-        uniqueAirports.add(toCode);
-
-        bounds.extend(fromAirport.coords);
-        bounds.extend(toAirport.coords);
+        totalDistance += distance;
+        bounds.extend(depAirport.coords).extend(arrAirport.coords);
     });
 
     airportVisits.forEach((data, code) => {
-        const marker = L.marker(data.coords, {
-            title: `${data.name} (${code})`
-        }).addTo(map);
-
-        const datesList = data.dates.length > 0
-            ? `<ul class="max-h-40 overflow-y-auto"><li>${data.dates.join('</li><li>')}</li></ul>`
-            : 'No dates recorded';
-        const popupContent = `
-            <b>${data.name} (${code})</b><br>
-            Visits: ${data.visits}<br>
-            <b>Dates:</b><br>
-            ${datesList}
-        `;
-        marker.bindPopup(popupContent);
-
-        if (autoOpenPopups) {
-            marker.openPopup();
-        }
+        const marker = L.marker(data.coords, { title: `${data.name} (${code})` }).addTo(map);
+        const datesList = data.dates.length ? `<ul class="max-h-40 overflow-y-auto">${data.dates.map(d => `<li>${d}</li>`).join('')}</ul>` : 'No dates recorded';
+        marker.bindPopup(`<b>${data.name} (${code})</b><br>Visits: ${data.visits}<br><b>Dates:</b><br>${datesList}`);
+        if (autoOpenPopups) marker.openPopup();
     });
 
     document.getElementById('total-flights').textContent = `Total Flights: ${displayFlights.length}`;
     document.getElementById('unique-airports').textContent = `Unique Airports: ${uniqueAirports.size}`;
     document.getElementById('total-distance').textContent = `Total Distance: ${totalDistance.toFixed(2)} km`;
 
-    if (airportVisits.size > 0) {
-        map.fitBounds(bounds, { padding: [50, 50] });
-    } else {
-        map.setView([0, 0], 2);
-    }
+    airportVisits.size > 0 ? map.fitBounds(bounds, { padding: [50, 50] }) : map.setView([0, 0], 2);
 }
