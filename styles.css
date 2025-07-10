@@ -1,0 +1,405 @@
+body {
+    background-image: url('https://source.unsplash.com/1600x900/?sky,clouds');
+    background-size: cover;
+    background-attachment: fixed;
+    background-color: #333; /* Fallback color if image fails */
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+}
+
+#map {
+    width: 100%;
+    height: 100vh;
+    z-index: 1; /* Remove border to eliminate visible edges */
+}
+
+.leaflet-container {
+    z-index: 1;
+    transition: filter 0.3s ease;
+}
+
+.dark-mode .leaflet-container {
+    filter: brightness(0.85);
+}
+
+#menu-backdrop {
+    z-index: 900;
+    transition: opacity 0.3s ease;
+}
+
+#menu-overlay {
+    z-index: 1000;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    opacity: 1;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
+    will-change: transform, opacity;
+    overflow-y: auto;
+}
+
+#menu-overlay.translate-x-full {
+    opacity: 0;
+}
+
+#menu-toggle {
+    z-index: 1100 !important;
+    transition: background-color 0.2s ease;
+    display: block !important;
+    position: fixed !important;
+    top: 1rem;
+    right: 1rem;
+}
+
+#loading-indicator,
+#map-style-loading,
+#tile-error,
+#file-error {
+    z-index: 1200;
+    transition: opacity 0.3s ease;
+    will-change: opacity;
+}
+
+#loading-indicator.hidden,
+#map-style-loading.hidden,
+#tile-error.hidden,
+#file-error.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#tile-error,
+#file-error {
+    transition: opacity 0.3s ease;
+}
+
+@keyframes dash {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+.flight-path {
+    stroke-dasharray: 10, 5;
+    stroke-dashoffset: 15;
+    animation: dash 2s linear forwards;
+}
+
+.dark-mode {
+    background-color: #222831;
+    color: #f0f4f8;
+}
+
+.dark-mode #menu-overlay {
+    background-color: #393e46;
+}
+
+.dark-mode #menu-backdrop {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.dark-mode #loading-indicator .bg-white,
+.dark-mode #map-style-loading .bg-white,
+.dark-mode #tile-error,
+.dark-mode #file-error {
+    background-color: #393e46;
+    color: #f0f4f8;
+}
+
+.dark-mode .bg-gray-50 {
+    background-color: #4a5568;
+}
+
+.dark-mode .text-gray-800 {
+    color: #f0f4f8;
+}
+
+.dark-mode .text-gray-600 {
+    color: #d3dce6;
+}
+
+.dark-mode .text-gray-700 {
+    color: #e2e8f0;
+}
+
+/* Enhanced Styles for Column Mapping UI */
+#column-mapping-container {
+    max-height: 80vh;
+    overflow-y: auto;
+    border-radius: 8px;
+}
+
+.logbook-preview table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+}
+
+.logbook-preview th,
+.logbook-preview td {
+    border: 1px solid #e2e8f0;
+    padding: 0.5rem;
+    text-align: left;
+}
+
+.dark-mode .logbook-preview th,
+.dark-mode .logbook-preview td {
+    border-color: #4a5568;
+}
+
+.logbook-preview th {
+    background-color: #edf2f7;
+    font-weight: 600;
+}
+
+.dark-mode .logbook-preview th {
+    background-color: #4a5568;
+}
+
+.logbook-preview td {
+    background-color: #fff;
+}
+
+.dark-mode .logbook-preview td {
+    background-color: #2d3748;
+}
+
+.clickable-header {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.clickable-header:hover {
+    background-color: #e2e8f0;
+}
+
+.dark-mode .clickable-header:hover {
+    background-color: #5a6a85;
+}
+
+/* Improved Menu Styles */
+#menu-overlay .menu-header {
+    position: sticky;
+    top: 0;
+    background-color: white;
+    z-index: 1002;
+}
+
+.dark-mode #menu-overlay .menu-header {
+    background-color: #393e46;
+}
+
+#menu-overlay .p-6 {
+    padding: 1.5rem;
+}
+
+/* Section Styling */
+#menu-overlay .section {
+    border-top: 1px solid #e2e8f0;
+    padding-top: 1rem;
+}
+
+.dark-mode #menu-overlay .section {
+    border-top-color: #4a5568;
+}
+
+#menu-overlay .section:first-child {
+    border-top: none;
+    padding-top: 0;
+}
+
+/* Collapsible Section Styling */
+.collapsible-section button[data-chevron].expanded span[data-chevron] {
+    transform: rotate(90deg);
+}
+
+/* Icon Styling */
+[data-icon]::before {
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    content: attr(data-icon);
+    margin-right: 0.5rem;
+    font-size: 1rem;
+    display: inline-block;
+}
+
+[data-icon="map"]::before { content: "\f278"; }
+[data-icon="plane"]::before { content: "\f072"; }
+[data-icon="upload"]::before { content: "\f093"; }
+[data-icon="plane-departure"]::before { content: "\f5b0"; }
+[data-icon="check"]::before { content: "\f00c"; }
+[data-icon="adjust"]::before { content: "\f042"; }
+[data-icon="eye"]::before { content: "\f06e"; }
+[data-icon="filter"]::before { content: "\f0b0"; }
+[data-icon="calendar-alt"]::before { content: "\f073"; }
+[data-icon="sort"]::before { content: "\f0dc"; }
+[data-icon="book"]::before { content: "\f02d"; }
+[data-icon="plus"]::before { content: "\f067"; }
+[data-icon="trash"]::before { content: "\f2ed"; }
+[data-icon="download"]::before { content: "\f019"; }
+[data-icon="file-export"]::before { content: "\f56e"; }
+[data-icon="map-marker-alt"]::before { content: "\f3c5"; }
+[data-icon="plus-circle"]::before { content: "\f055"; }
+[data-icon="chart-bar"]::before { content: "\f080"; }
+[data-icon="map-marked-alt"]::before {
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    content: "\f5a0";
+    margin-right: 0.5rem;
+    font-size: 1rem;
+    display: inline-block;
+}
+
+/* Button Visual Feedback */
+#menu-overlay button {
+    position: relative;
+    z-index: 1001;
+    pointer-events: auto;
+    transition: transform 0.1s ease, background-color 0.2s ease;
+}
+
+#menu-overlay button:hover {
+    transform: scale(1.02);
+}
+
+#menu-overlay button:active {
+    transform: scale(0.98);
+}
+
+#menu-overlay button:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    background-color: #a0aec0;
+}
+
+/* Tooltip Styling */
+#menu-overlay [title] {
+    position: relative;
+}
+
+#menu-overlay [title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: white;
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    z-index: 1003;
+    opacity: 0.9;
+}
+
+/* Improved Responsiveness */
+@media (max-width: 640px) {
+    #map {
+        height: calc(100vh - 60px);
+    }
+
+    #menu-overlay {
+        width: 100%;
+        padding: 0;
+    }
+
+    #menu-overlay .p-6 {
+        padding: 1rem;
+    }
+
+    #menu-overlay button,
+    #menu-overlay select {
+        padding: 0.75rem;
+        min-height: 44px;
+        font-size: 1rem;
+    }
+
+    #menu-overlay .section h3 {
+        font-size: 1.125rem;
+    }
+
+    #column-mapping-container {
+        padding: 1rem;
+    }
+
+    .logbook-preview table {
+        font-size: 0.75rem;
+    }
+
+    .logbook-preview th,
+    .logbook-preview td {
+        padding: 0.25rem;
+    }
+}
+
+[data-icon="cog"]::before {
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    content: "\f013";
+    margin-right: 0.5rem;
+    font-size: 1rem;
+    display: inline-block;
+}
+
+[data-icon="bars"]::before {
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    content: "\f0c9";
+    margin-right: 0.5rem;
+    font-size: 1rem;
+    display: inline-block;
+}
+
+.reorder-item.dragging {
+    opacity: 0.5;
+    background-color: #e2e8f0;
+}
+
+.reorder-item:hover:not(.dragging) {
+    background-color: #f0f4f8;
+}
+
+.drag-handle {
+    cursor: grab;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+#reorder-menu-overlay {
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    z-index: 1200;
+}
+
+#reorder-menu-overlay.open {
+    transform: translateX(0) !important;
+}
+
+/* LogTen-style Field Mapping UI */
+#field-mappings .mapping-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+#field-mappings select {
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+    background-color: #fff;
+}
+.dark-mode #field-mappings select {
+    background-color: #2d3748;
+    border-color: #4a5568;
+    color: #f0f4f8;
+}
+#logbook-preview .preview-table {
+    max-height: 300px;
+    overflow-y: auto;
+}
+#column-mapping-container input[type="checkbox"] {
+    accent-color: #3388ff;
+}

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pilot Flight Path Visualizer</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <!-- Backdrop for Menu Overlay -->
+    <div id="menu-backdrop" class="fixed inset-0 bg-black bg-opacity-50 z-900 hidden"></div>
+    <!-- Loading Indicator for Download -->
+    <div id="loading-indicator" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-1200 hidden">
+        <div class="bg-white p-4 rounded-md shadow-lg text-center">
+            <p class="text-gray-800">Downloading map...</p>
+        </div>
+    </div>
+    <!-- Loading Indicator for Map Style Change -->
+    <div id="map-style-loading" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-1200 hidden">
+        <div class="bg-white p-4 rounded-md shadow-lg text-center">
+            <p class="text-gray-800">Loading map style...</p>
+        </div>
+    </div>
+    <!-- Loading Indicator for Logbook Upload -->
+    <div id="logbook-loading" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-1200 hidden">
+        <div class="bg-white p-4 rounded-md shadow-lg text-center">
+            <p class="text-gray-800">Processing logbook...</p>
+            <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                <div id="logbook-progress" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+    <!-- Notification for Tile Loading Errors -->
+    <div id="tile-error" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white p-2 rounded-md z-1200 hidden">
+        <p>Failed to load dark map tiles. Please try another style.</p>
+    </div>
+    <!-- Notification for File Parsing Errors -->
+    <div id="file-error" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white p-4 rounded-md z-1200 hidden">
+        <p id="error-message">Failed to parse file. Please ensure it contains valid flight data.</p>
+    </div>
+    <!-- Upper-Right Menu Button -->
+    <button id="menu-toggle" class="fixed top-4 right-4 z-1100 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700" aria-label="Open Menu">
+        <svg id="menu-icon-open" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+        <svg id="menu-icon-close" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+    <!-- Menu Overlay -->
+    <div id="menu-overlay" class="fixed top-0 right-0 h-full w-80 bg-white shadow-lg z-1000 transform translate-x-full transition-transform duration-300 overflow-y-auto">
+        <!-- Sticky Header -->
+        <div class="menu-header p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <img src="logo.png" alt="Pilot Flight Visualizer Logo" class="w-24">
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800 mt-2">Flight Visualizer</h1>
+        </div>
+        <!-- Menu Content -->
+        <div class="p-6 relative">
+            <!-- Edit Menu Button -->
+            <button id="edit-menu-btn" class="fixed bottom-4 right-4 bg-purple-600 text-white p-2 rounded-full shadow-lg hover:bg-purple-700 z-1100" title="Edit Menu Order">
+                <span data-icon="cog" class="text-lg"></span>
+            </button>
+            <!-- Menu Sections Container -->
+            <div id="menu-sections" class="space-y-6">
+                <!-- Flight Management Section -->
+                <div class="section" data-section-id="flight-management">
+                    <h3 class="text-lg font-bold text-gray-800 mb-2 flex items-center">
+                        <span data-icon="plane" class="mr-2"></span>Flight Management
+                    </h3>
+                    <!-- Upload Logbook -->
+                    <div class="collapsible-section">
+                        <button id="toggle-logbook-btn" class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 flex items-center justify-between">
+                            <span class="flex items-center">
+                                <span data-icon="upload" class="mr-2"></span>
+                                <span class="text-label">Upload Logbook</span>
+                            </span>
+                            <span data-chevron="logbook" class="fas fa-chevron-right transition-transform duration-200"></span>
+                        </button>
+                        <div id="logbook-upload-container" class="hidden mt-2 space-y-2">
+                            <label for="logbook-upload" class="text-sm font-medium text-gray-700">Upload Logbook (CSV, PDF, TXT, JPG, PNG, JPEG)</label>
+                            <input type="file" id="logbook-upload" accept=".csv,.pdf,.txt,.jpg,.png,.jpeg" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-50 file:text-blue-700 file:hover:bg-blue-100">
+                        </div>
+                    </div>
+                    <!-- Add Flight -->
+                    <div class="collapsible-section mt-2">
+                        <button id="toggle-form-btn" class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 flex items-center justify-between">
+                            <span class="flex items-center">
+                                <span data-icon="plane-departure" class="mr-2"></span>
+                                <span class="text-label">Add Flight</span>
+                            </span>
+                            <span data-chevron="form" class="fas fa-chevron-right transition-transform duration-200"></span>
+                        </button>
+                        <div id="flight-form-container" class="hidden mt-2 space-y-2">
+                            <div class="flex flex-col">
+                                <label for="departure" class="text-sm font-medium text-gray-700">Departure Airport</label>
+                                <input type="text" id="departure" class="mt-1 p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., KPHX">
+                            </div>
+                            <div class="flex flex-col">
+                                <label for="arrival" class="text-sm font-medium text-gray-800">Arrival Airport</label>
+                                <input type="text" id="arrival" class="mt-1 p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., KTUS">
+                            </div>
+                            <button id="submit-flight" class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 flex items-center">
+                                <span data-icon="check" class="mr-2"></span>Submit Flight
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Map Controls Section -->
+                <div class="section" data-section-id="map-controls">
+                    <h3 class="text-lg font-bold text-gray-800 mb-2 flex items-center">
+                        <span data-icon="map-marked-alt" class="mr-2"></span>Map Controls
+                    </h3>
+                    <div class="flex flex-col">
+                        <select id="map-style" class="mt-1 p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                            <option value="satellite">Satellite</option>
+                        </select>
+                    </div>
+                    <button id="theme-toggle" class="w-full bg-gray-600 text-white p-2 rounded-md hover:bg-gray-700 mt-2 flex items-center">
+                        <span data-icon="adjust" class="mr-2"></span>Toggle Dark Mode
+                    </button>
+                    <button id="toggle-local-flights-btn" class="w-full bg-gray-600 text-white p-2 rounded-md hover:bg-gray-700 mt-2 flex items-center" title="Show or hide flights that start and end at the same airport">
+                        <span data-icon="eye" class="mr-2"></span>Show/Hide Local Flights
+                    </button>
+                </div>
+                <!-- Filters & Sorting Section -->
+                <div class="section" data-section-id="filters-sorting">
+                    <h3 class="text-lg font-bold text-gray-800 mb-2 flex items-center">
+                        <span data-icon="filter" class="mr-2"></span>Filters & Sorting
+                    </h3>
+                    <!-- Filter by Date Range -->
+                    <div class="collapsible-section">
+                        <button id="toggle-date-filter-btn" class="w-full bg-green-600 text-white p-2 rounded-md hover:bg-green-700 flex items-center justify-between" title="Show flights within a specific date range">
+                            <span class="flex items-center">
+                                <span data-icon="calendar-alt" class="mr-2"></span>Filter by Date Range
+                            </span>
+                            <span data-chevron="date-filter" class="fas fa-chevron-right transition-transform duration-200"></span>
+                        </button>
+                        <div id="date-filter-container" class="hidden mt-2 space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">Start Date:</label>
+                            <input type="date" id="start-date" class="border p-1 w-full rounded-md">
+                            <label class="block mt-2 text-sm font-medium text-gray-700">End Date:</label>
+                            <input type="date" id="end-date" class="border p-1 w-full rounded-md">
+                            <button id="apply-date-filter" class="w-full bg-green-600 text-white p-2 rounded-md hover:bg-green-700 flex items-center">
+                                <span data-icon="check" class="mr-2"></span>Apply Date Filter
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Filter Flights -->
+                    <div class="collapsible-section mt-2">
+                        <button id="toggle-filter-flights-btn" class="w-full bg-green-600 text-white p-2 rounded-md hover:bg-green-700 flex items-center justify-between" title="Filter flights by departure or arrival airport and sort by various criteria">
+                            <span class="flex items-center">
+                                <span data-icon="sort" class="mr-2"></span>Filter Flights
+                            </span>
+                            <span data-chevron="filter-flights" class="fas fa-chevron-right transition-transform duration-200"></span>
+                        </button>
+                        <div id="filter-flights-container" class="hidden mt-2 space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">Departure Airport:</label>
+                            <input type="text" id="filter-departure" placeholder="e.g., ORD" class="border p-1 w-full rounded-md">
+                            <label class="block mt-2 text-sm font-medium text-gray-700">Arrival Airport:</label>
+                            <input type="text" id="filter-arrival" placeholder="e.g., MIA" class="border p-1 w-full rounded-md">
+                            <h4 class="text-md font-semibold text-gray-800 mt-2">Sort Flights</h4>
+                            <select id="sort-flights" class="border p-1 w-full rounded-md">
+                                <option value="date-asc">Date (Ascending)</option>
+                                <option value="date-desc">Date (Descending)</option>
+                                <option value="distance-asc">Distance (Ascending)</option>
+                                <option value="distance-desc">Distance (Descending)</option>
+                                <option value="frequency-desc">Route Frequency (Descending)</option>
+                            </select>
+                            <button id="apply-filter-sort" class="w-full bg-green-600 text-white p-2 rounded-md hover:bg-green-700 flex items-center">
+                                <span data-icon="filter" class="mr-2"></span>Filter Flights
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Logbook Management Section -->
+                <div class="section" data-section-id="logbook-management">
+                    <h3 class="text-lg font-bold text-gray-800 mb-2 flex items-center">
+                        <span data-icon="book" class="mr-2"></span>Logbook Management
+                    </h3>
+                    <div class="flex flex-col">
+                        <select id="logbook-select" class="mt-1 p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            <option value="Logbook 1">Logbook 1</option>
+                        </select>
+                    </div>
+                    <button id="add-logbook" class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 mt-2 flex items-center">
+                        <span data-icon="plus" class="mr-2"></span>Add New Logbook
+                    </button>
+                    <button id="clear-flights-btn" class="w-full bg-red-600 text-white p-2 rounded-md hover:bg-red-700 mt-2 flex items-center" title="Remove all flights from the current logbook">
+                        <span data-icon="trash" class="mr-2"></span>Clear Flights
+                    </button>
+                    <button id="download-btn" class="w-full bg-green-600 text-white p-2 rounded-md hover:bg-blue-700 mt-2 flex items-center" title="Download the current map as a PNG image">
+                        <span data-icon="download" class="mr-2"></span>Download Map
+                    </button>
+                    <button id="export-flights-btn" class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 mt-2 flex items-center" title="Download your flights as a CSV file">
+                        <span data-icon="file-export" class="mr-2"></span>Export Flights to CSV
+                    </button>
+                </div>
+                <!-- Add Missing Airport Section -->
+                <div class="section" data-section-id="add-missing-airport">
+                    <button id="toggle-missing-airport-btn" class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 flex items-center justify-between">
+                        <span class="flex items-center">
+                            <span data-icon="map-marker-alt" class="mr-2"></span>Add Missing Airport
+                        </span>
+                        <span data-chevron="missing-airport" class="fas fa-chevron-right transition-transform duration-200"></span>
+                    </button>
+                    <div id="missing-airport-form-container" class="hidden mt-2 space-y-2">
+                        <label class="block text-sm font-medium text-gray-700">Airport Code (IATA):</label>
+                        <input type="text" id="missing-airport-iata" placeholder="e.g., YYZ" class="border p-1 w-full rounded-md">
+                        <label class="block text-sm font-medium text-gray-700">ICAO Code:</label>
+                        <input type="text" id="missing-airport-icao" placeholder="e.g., CYYZ" class="border p-1 w-full rounded-md">
+                        <label class="block text-sm font-medium text-gray-700">Identifier (if any):</label>
+                        <input type="text" id="missing-airport-identifier" placeholder="e.g., YYZ" class="border p-1 w-full rounded-md">
+                        <label class="block text-sm font-medium text-gray-700">Country Code:</label>
+                        <input type="text" id="missing-airport-country" placeholder="e.g., CA" class="border p-1 w-full rounded-md">
+                        <label class="block text-sm font-medium text-gray-700">Latitude:</label>
+                        <input type="number" step="any" id="missing-airport-lat" placeholder="e.g., 43.6777" class="border p-1 w-full rounded-md">
+                        <label class="block text-sm font-medium text-gray-700">Longitude:</label>
+                        <input type="number" step="any" id="missing-airport-lon" placeholder="e.g., -79.6248" class="border p-1 w-full rounded-md">
+                        <label class="block text-sm font-medium text-gray-700">Airport Name:</label>
+                        <input type="text" id="missing-airport-name" placeholder="e.g., Toronto Pearson International Airport" class="border p-1 w-full rounded-md">
+                        <button id="add-missing-airport" class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 flex items-center">
+                            <span data-icon="plus-circle" class="mr-2"></span>Add Airport
+                        </button>
+                    </div>
+                </div>
+                <!-- Flight Stats Section -->
+                <div class="section" data-section-id="flight-stats">
+                    <h3 class="text-lg font-bold text-gray-800 mb-2 flex items-center">
+                        <span data-icon="chart-bar" class="mr-2"></span>Flight Stats
+                    </h3>
+                    <div id="stats" class="bg-gray-50 p-4 rounded-md">
+                        <p id="total-flights" class="text-gray-600">Total Flights: 0</p>
+                        <p id="unique-airports" class="text-gray-600">Unique Airports: 0</p>
+                        <p id="total-distance" class="text-gray-600">Total Distance: 0 km</p>
+                    </div>
+                </div>
+                <!-- Column Mapping UI (Hidden by Default) -->
+                <div class="section" data-section-id="column-mapping">
+                    <div id="column-mapping-container" class="hidden space-y-4 p-4 bg-gray-50 rounded-md">
+                        <!-- Non-CSV Mapping UI (PDF, TXT, Images) -->
+                        <div id="non-csv-mapping" class="space-y-2">
+                            <h2 class="text-lg font-semibold text-gray-800">Map Logbook Columns</h2>
+                            <p class="text-sm text-gray-600">The logbook format was not automatically recognized. Please click on the column headers below to specify Departure (FROM) and Arrival (TO).</p>
+                            <div id="logbook-preview-non-csv" class="max-h-40 overflow-y-auto bg-white p-2 rounded-md shadow-sm border border-gray-200"></div>
+                            <button id="confirm-mapping-non-csv" class="w-full bg-green-600 text-white p-2 rounded-md hover:bg-green-700 flex items-center">
+                                <span data-icon="check" class="mr-2"></span>Confirm Mapping
+                            </button>
+                            <button id="cancel-mapping-non-csv" class="w-full bg-gray-600 text-white p-2 rounded-md hover:bg-gray-700 flex items-center">
+                                <span data-icon="times" class="mr-2"></span>Cancel
+                            </button>
+                        </div>
+                        <!-- CSV Mapping UI (LogTen-style) -->
+                        <div id="csv-mapping" class="hidden space-y-2">
+                            <h2 class="text-lg font-semibold text-gray-800">Map CSV Logbook Fields</h2>
+                            <p class="text-sm text-gray-600">Map each column to a field. Required: Date, From, To. <a href="/template.csv" download="logbook_template.csv" class="text-blue-600 hover:underline">Download CSV template</a>.</p>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">My Dates Look Like:</label>
+                                <select id="date-format" class="mt-1 p-2 border rounded-md w-full focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="MM/DD/YYYY">MM/DD/YYYY (e.g., 04/20/2025)</option>
+                                    <option value="DD/MMM/YY">DD/MMM/YY (e.g., 20/Apr/25)</option>
+                                    <option value="YYYY-MM-DD">YYYY-MM-DD (e.g., 2025-04-20)</option>
+                                    <option value="DD-MM-YYYY">DD-MM-YYYY (e.g., 20-04-2025)</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="ignore-first-row" class="mr-2" checked>
+                                <label for="ignore-first-row" class="text-sm font-medium text-gray-700">Ignore first row (headers)</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="times-in-minutes" class="mr-2">
+                                <label for="times-in-minutes" class="text-sm font-medium text-gray-700">Flight times are in minutes (e.g., 72)</label>
+                            </div>
+                            <div id="logbook-preview-csv" class="max-h-40 overflow-y-auto bg-white p-2 rounded-md shadow-sm border border-gray-200"></div>
+                            <div id="field-mappings" class="space-y-2"></div>
+                            <div class="flex justify-between">
+                                <button id="prev-row" class="bg-gray-600 text-white p-2 rounded-md hover:bg-gray-700">Previous Row</button>
+                                <button id="next-row" class="bg-gray-600 text-white p-2 rounded-md hover:bg-gray-700">Next Row</button>
+                            </div>
+                            <button id="confirm-mapping-csv" class="w-full bg-green-600 text-white p-2 rounded-md hover:bg-green-700 flex items-center">
+                                <span data-icon="check" class="mr-2"></span>Import
+                            </button>
+                            <button id="cancel-mapping-csv" class="w-full bg-gray-600 text-white p-2 rounded-md hover:bg-gray-700 flex items-center">
+                                <span data-icon="times" class="mr-2"></span>Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Reorder Menu Overlay -->
+    <div id="reorder-menu-overlay" class="fixed top-0 right-0 h-full w-80 bg-white shadow-lg z-1100 transform translate-x-full transition-transform duration-300 overflow-y-auto">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-bold text-gray-800">Reorder Menu</h2>
+                <button id="close-reorder-menu" class="text-gray-600 hover:text-gray-800">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div id="reorder-list" class="p-6 space-y-2">
+            <!-- Draggable items will be populated by JavaScript -->
+        </div>
+    </div>
+    <!-- Full-Screen 2D Map -->
+    <div id="map" class="flex-1 h-screen"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-image@0.4.0/leaflet-image.js"></script>
+    <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script src="https://unpkg.com/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
