@@ -33,7 +33,6 @@ body {
     transition: transform 0.3s ease, opacity 0.3s ease;
     opacity: 1;
     box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
-    will-change: transform, opacity;
     overflow-y: auto;
 }
 
@@ -56,7 +55,6 @@ body {
 #file-error {
     z-index: 1200;
     transition: opacity 0.3s ease;
-    will-change: opacity;
 }
 
 #loading-indicator.hidden,
@@ -67,10 +65,6 @@ body {
     pointer-events: none;
 }
 
-#tile-error,
-#file-error {
-    transition: opacity 0.3s ease;
-}
 
 @keyframes dash {
     to {
@@ -241,14 +235,9 @@ body {
 [data-icon="map-marker-alt"]::before { content: "\f3c5"; }
 [data-icon="plus-circle"]::before { content: "\f055"; }
 [data-icon="chart-bar"]::before { content: "\f080"; }
-[data-icon="map-marked-alt"]::before {
-    font-family: "Font Awesome 5 Free";
-    font-weight: 900;
-    content: "\f5a0";
-    margin-right: 0.5rem;
-    font-size: 1rem;
-    display: inline-block;
-}
+[data-icon="map-marked-alt"]::before { content: "\f5a0"; }
+[data-icon="cog"]::before { content: "\f013"; }
+[data-icon="bars"]::before { content: "\f0c9"; }
 
 /* Button Visual Feedback */
 #menu-overlay button {
@@ -258,7 +247,8 @@ body {
     transition: transform 0.1s ease, background-color 0.2s ease;
 }
 
-#menu-overlay button:hover {
+#menu-overlay button:hover,
+#menu-overlay button:active {
     transform: scale(1.02);
 }
 
@@ -331,24 +321,6 @@ body {
     .logbook-preview td {
         padding: 0.25rem;
     }
-}
-
-[data-icon="cog"]::before {
-    font-family: "Font Awesome 5 Free";
-    font-weight: 900;
-    content: "\f013";
-    margin-right: 0.5rem;
-    font-size: 1rem;
-    display: inline-block;
-}
-
-[data-icon="bars"]::before {
-    font-family: "Font Awesome 5 Free";
-    font-weight: 900;
-    content: "\f0c9";
-    margin-right: 0.5rem;
-    font-size: 1rem;
-    display: inline-block;
 }
 
 .reorder-item.dragging {

@@ -1,32 +1,46 @@
 // Part 1: Globals, Constants, and Initialization
 
-let map;
-let logbooks = { 'Logbook 1': { flights: [], stats: {} } };
-let currentLogbook = 'Logbook 1';
-let airportsData = { airports: [], code_to_airport_id: {} };
-let tileLayer;
-let isDarkMode = false;
-let currentMapStyle = 'light';
+// --- Global Variables (alphabetized & grouped) ---
+// --- Configuration Constants ---
+let headerKeywords = ['departure', 'arrival', 'aircraft', 'duration'];
+const dateFormats = [
+  { regex: /^\d{1,2}\/\d{1,2}\/\d{2,4}$/, format: 'MM/dd/yyyy' },
+  { regex: /^\d{4}-\d{2}-\d{2}$/, format: 'yyyy-MM-dd' },
+  { regex: /^\d{2}-\d{2}-\d{4}$/, format: 'MM-dd-yyyy' },
+  { regex: /^\d{2} \w{3} \d{4}$/, format: 'dd MMM yyyy' },
+  { regex: /^\w{3} \d{1,2}, \d{4}$/, format: 'MMM dd, yyyy' }
+];
+
+// --- Debug Logger ---
+const DEBUG_MODE = true;
+function debugLog(...args) {
+  if (DEBUG_MODE) console.log(...args);
+}
+let airportCache = new Map();
 let airportFrequency = {};
-let validAirportCodes = new Set();
+let airportsData = { airports: [], code_to_airport_id: {} };
+let currentLogbook = 'Logbook 1';
+let currentMapStyle = 'light';
+let distanceCache = new Map();
+let endDate = null;
+let isDarkMode = false;
+let logbooks = { 'Logbook 1': { flights: [], stats: {} } };
+let map;
 let missingAirports = new Set();
-let showLocalFlights = true;
-let totalFlightTime = 0;
+let pendingCSVText = null;
+let pendingLogbookData = null;
 let routeFrequency = new Map();
+let showLocalFlights = true;
+let startDate = null;
+let tileLayer;
+let totalActualIFR = 0;
 let totalCrossCountry = 0;
+let totalFlightTime = 0;
 let totalNight = 0;
 let totalSolo = 0;
-let totalActualIFR = 0;
-let startDate = null;
-let endDate = null;
-
-const airportCache = new Map();
-const distanceCache = new Map();
-
 let userDefinedFromIndex = -1;
 let userDefinedToIndex = -1;
-let pendingLogbookData = null;
-let pendingCSVText = null;
+let validAirportCodes = new Set();
 
 const BATCH_SIZE = 20;
 const INVALIDATE_TIMEOUT = 200;
@@ -118,7 +132,7 @@ function calculateDynamicZoom() {
     let zoom = Math.log2(width / tileSize) + 0.5; // Base zoom to fit width
     zoom = Math.max(2, Math.min(4, Math.ceil(zoom))); // Clamp between 2 and 6
 
-    console.log(`[calculateDynamicZoom] Screen: ${width}x${height}, Calculated Zoom: ${zoom}`);
+    debugLog(`[calculateDynamicZoom] Screen: ${width}x${height}, Calculated Zoom: ${zoom}`);
     return zoom;
 }
 
@@ -156,6 +170,8 @@ function showFileError(message, category = 'general') {
 }
 
 function showToast(message) {
+    const existing = document.querySelector('.fixed.bottom-4.right-4');
+    if (existing) existing.remove();
     const toast = document.createElement('div');
     toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg z-1300 transition-opacity duration-300';
     toast.textContent = message;
@@ -173,7 +189,7 @@ function updateMapStyle(style) {
     tileError.classList.add('hidden');
 
     if (tileLayer) {
-        map.removeLayer(tileLayer);
+        try { map.removeLayer(tileLayer); } catch (_) {}
     }
 
     let newTileLayer;
@@ -186,7 +202,7 @@ function updateMapStyle(style) {
 
     newTileLayer.on('tileerror', () => {
         if (tileLayer) {
-            map.removeLayer(tileLayer);
+            try { map.removeLayer(tileLayer); } catch (_) {}
         }
         tileLayer = fallbackTileLayer.addTo(map);
         tileError.classList.remove('hidden');
@@ -204,7 +220,21 @@ function updateMapStyle(style) {
     }, INVALIDATE_TIMEOUT);
 }
 
+// --- Theme Toggle Handler ---
+function handleThemeToggle() {
+    document.body.classList.toggle('dark-mode');
+    isDarkMode = document.body.classList.contains('dark-mode');
+    this.querySelector('span:not([data-icon])').textContent =
+      isDarkMode ? 'Toggle Light Mode' : 'Toggle Dark Mode';
+    updateMapStyle(currentMapStyle);
+}
+
+// --- Map and UI Initialization ---
 window.addEventListener('load', () => {
+    // Cache frequently accessed DOM elements
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    const mapStyleSelect = document.getElementById('map-style');
+    const loadingIndicator = document.getElementById('loading-indicator');
     map = L.map('map', {
         zoomControl: true,
         attributionControl: true,
@@ -227,27 +257,22 @@ window.addEventListener('load', () => {
         const newZoom = calculateDynamicZoom();
         map.setZoom(newZoom, { animate: true });
         map.invalidateSize();
-        console.log(`[resize] Updated Zoom: ${newZoom}`);
+        debugLog(`[resize] Updated Zoom: ${newZoom}`);
     }, 200);
 
     window.addEventListener('resize', updateZoomOnResize);
 
-    document.getElementById('map-style').addEventListener('change', e => {
+    mapStyleSelect.addEventListener('change', e => {
         currentMapStyle = e.target.value;
         updateMapStyle(currentMapStyle);
     });
 
-    document.getElementById('theme-toggle').addEventListener('click', () => {
-        document.body.classList.toggle('dark-mode');
-        isDarkMode = document.body.classList.contains('dark-mode');
-        this.querySelector('span:not([data-icon])').textContent = isDarkMode ? 'Toggle Light Mode' : 'Toggle Dark Mode';
-        updateMapStyle(currentMapStyle);
-    });
+    themeToggleBtn.addEventListener('click', handleThemeToggle);
 
     const menuOverlay = document.getElementById('menu-overlay');
     const menuBackdrop = document.getElementById('menu-backdrop');
     const menuToggle = document.getElementById('menu-toggle');
-    const loadingIndicator = document.getElementById('loading-indicator');
+    // loadingIndicator already cached above
     const mapStyleLoading = document.getElementById('map-style-loading');
     const tileError = document.getElementById('tile-error');
     const fileError = document.getElementById('file-error');
@@ -654,9 +679,11 @@ window.addEventListener('load', () => {
     }
 });
 
-// Part 2: Functions and Parsing Logic
+// --- Functions and Parsing Logic ---
 
-const headerKeywords = [
+// --- CSV Parsing Logic ---
+
+headerKeywords = [
     'DATE', 'AIRCRAFT', 'FROM', 'TO', 'ROUTE', 'TYPE', 'REGISTRATION',
     'PILOT', 'COMMAND', 'FLIGHT', 'NUMBER', 'MULTI', 'ASEL', 'ASES',
     'AMEL', 'AMES', 'JET', 'TURBO', 'PROP', 'ROTOR', 'TAKEOFFS', 'LANDINGS',
@@ -664,7 +691,7 @@ const headerKeywords = [
     'OUT', 'IN', 'DEP', 'ARR', 'DEPARTURE', 'ARRIVAL'
 ];
 
-const summaryIndicators = ['TOTAL', 'FORWARDED', 'PAGE', 'THIS', 'REPORT', 'SUBTOTAL', 'CARRIED FORWARD'];
+summaryIndicators = ['TOTAL', 'FORWARDED', 'PAGE', 'THIS', 'REPORT', 'SUBTOTAL', 'CARRIED FORWARD'];
 
 function isAirportCode(str) {
     const excludedTerms = [
@@ -711,7 +738,10 @@ function getAirport(code, contextAirports = []) {
     }
 
     if (matchingAirportIds.length === 0) {
-        if (isAirportCode(upperCode)) missingAirports.add(upperCode);
+        if (isAirportCode(upperCode)) {
+            debugLog(`Unmatched airport code: ${upperCode}`);
+            missingAirports.add(upperCode);
+        }
         return null;
     }
 
@@ -767,13 +797,36 @@ function getAirport(code, contextAirports = []) {
     const bestCandidate = scoredCandidates[0];
 
     if (bestCandidate.score > 0) {
-        console.log(`Selected airport for ${upperCode}: ${bestCandidate.airport.name} (${bestCandidate.airport.iata || bestCandidate.airport.icao}), Score: ${bestCandidate.score}, Reasons: ${bestCandidate.reasons.join(', ')}`);
+        debugLog(`Selected airport for ${upperCode}: ${bestCandidate.airport.name} (${bestCandidate.airport.iata || bestCandidate.airport.icao}), Score: ${bestCandidate.score}, Reasons: ${bestCandidate.reasons.join(', ')}`);
         return bestCandidate.airport;
     }
 
-    if (isAirportCode(upperCode)) missingAirports.add(upperCode);
+    if (isAirportCode(upperCode)) {
+        debugLog(`Unmatched airport code: ${upperCode}`);
+        missingAirports.add(upperCode);
+    }
     return null;
 }
+// Utility: Check if both departure and arrival are valid airport codes and exist
+function isValidAirportPair(depCode, arrCode) {
+    return isAirportCode(depCode) && isAirportCode(arrCode) &&
+           getAirport(depCode) && getAirport(arrCode);
+}
+
+// Utility: Normalize a 3-letter airport code to its ICAO equivalent if present in icaoList
+function normalizeAirportCode(code, icaoList) {
+    if (code.length === 3 && icaoList?.length) {
+      const match = icaoList.find(icao => icao.slice(1) === code);
+      return match || code;
+    }
+    return code;
+}
+
+// Utility: Parse a CSV row by delimiter, trimming and removing quotes
+function parseRow(line, delimiter) {
+    return line.split(delimiter).map(cell => cell.trim().replace(/"/g, ''));
+}
+
 
 function getCoords(airport) {
     return airport ? airport.coords : null;
@@ -904,7 +957,7 @@ function findDateInRow(row) {
         }}
     ];
 
-    console.log(`[findDateInRow] Scanning row: ${row.join(' | ')}`);
+    debugLog(`[findDateInRow] Scanning row: ${row.join(' | ')}`);
 
     for (const cell of row) {
         if (!cell || typeof cell !== 'string') continue;
@@ -921,19 +974,19 @@ function findDateInRow(row) {
                 if (parsedDate) {
                     const dateObj = new Date(parsedDate);
                     if (!isNaN(dateObj.getTime())) {
-                        console.log(`[findDateInRow] Found valid date: ${parsedDate} from cell: ${trimmedCell}`);
+                        debugLog(`[findDateInRow] Found valid date: ${parsedDate} from cell: ${trimmedCell}`);
                         return parsedDate;
                     } else {
-                        console.log(`[findDateInRow] Invalid date parsed: ${parsedDate} from cell: ${trimmedCell}`);
+                        debugLog(`[findDateInRow] Invalid date parsed: ${parsedDate} from cell: ${trimmedCell}`);
                     }
                 }
             }
         }
     }
 
-    console.log(`[findDateInRow] No valid date found in row: ${row.join(' | ')}`);
+    debugLog(`[findDateInRow] No valid date found in row: ${row.join(' | ')}`);
     const fallbackDate = new Date().toISOString().split('T')[0];
-    console.log(`[findDateInRow] Using fallback date: ${fallbackDate}`);
+    debugLog(`[findDateInRow] Using fallback date: ${fallbackDate}`);
     return fallbackDate;
 }
 
@@ -1043,7 +1096,7 @@ function parseCSV(csvText) {
     const newFlights = [];
     if (depIndex !== -1 && arrIndex !== -1) {
         for (let i = 1; i < lines.length; i++) {
-            const row = lines[i].split(delimiter).map(cell => cell.trim().replace(/"/g, ''));
+            const row = parseRow(lines[i], delimiter);
             if (row.length < Math.max(depIndex, arrIndex) + 1) continue;
 
             let departure = '', arrival = '';
@@ -1062,6 +1115,7 @@ function parseCSV(csvText) {
 
             const depAirport = getAirport(departure);
             const arrAirport = getAirport(arrival);
+            const aircraftInfo = extractAircraftInfo(row);
 
             if (isAirportCode(departure) && isAirportCode(arrival) && depAirport && arrAirport) {
                 const distance = calculateDistance(depAirport.coords, arrAirport.coords);
@@ -1072,8 +1126,8 @@ function parseCSV(csvText) {
                     distance: distance,
                     duration: extractDuration(row),
                     notes: '',
-                    aircraftType: extractAircraftInfo(row).aircraftType,
-                    registration: extractAircraftInfo(row).registration,
+                    aircraftType: aircraftInfo.aircraftType,
+                    registration: aircraftInfo.registration,
                     crossCountry: extractTime(row, 'cross country'),
                     night: extractTime(row, 'night'),
                     solo: extractTime(row, 'solo'),
@@ -1096,7 +1150,7 @@ function parseCSV(csvText) {
         userDefinedToIndex = -1;
         pendingCSVText = null;
     } else {
-        const rows = lines.map(line => line.split(delimiter).map(cell => cell.trim().replace(/"/g, '')));
+        const rows = lines.map(line => parseRow(line, delimiter));
         showColumnMappingUI(rows, true, csvText);
     }
 }
@@ -1221,7 +1275,7 @@ async function processRow(row, i, j, fromIndex, toIndex) {
             countryPrefixes.some(prefix => code.startsWith(prefix))
         );
         if (remarksAirports.length > 0) {
-            console.log(`Row ${j} Remarks airports:`, remarksAirports);
+            debugLog(`Row ${j} Remarks airports:`, remarksAirports);
         }
 
         if (remarksAirports.length >= 2) {
@@ -1252,7 +1306,7 @@ async function processRow(row, i, j, fromIndex, toIndex) {
                 }
             }
             if (flights.length > 0) {
-                console.log(`Row ${j} airports from remarks:`, flights.map(f => `${f.departure} to ${f.arrival}`));
+                debugLog(`Row ${j} airports from remarks:`, flights.map(f => `${f.departure} to ${f.arrival}`));
                 resolve(flights);
                 return;
             }
@@ -1262,19 +1316,13 @@ async function processRow(row, i, j, fromIndex, toIndex) {
             row.length > Math.max(userDefinedFromIndex, userDefinedToIndex)) {
             let fromCode = row[userDefinedFromIndex].toUpperCase();
             let toCode = row[userDefinedToIndex].toUpperCase();
-            if (fromCode.length === 3 && validAirportCodes.has(fromCode) && remarksAirports.length > 0) {
-                const possibleICAO = remarksAirports.find(icao => icao.slice(1) === fromCode);
-                fromCode = possibleICAO || fromCode;
-            }
-            if (toCode.length === 3 && validAirportCodes.has(toCode) && remarksAirports.length > 0) {
-                const possibleICAO = remarksAirports.find(icao => icao.slice(1) === toCode);
-                toCode = possibleICAO || toCode;
-            }
+            fromCode = normalizeAirportCode(fromCode, remarksAirports);
+            toCode = normalizeAirportCode(toCode, remarksAirports);
             if (isAirportCode(fromCode) && validAirportCodes.has(fromCode) &&
                 isAirportCode(toCode) && validAirportCodes.has(toCode)) {
                 departure = fromCode;
                 arrival = toCode;
-                console.log(`Row ${j} FROM/TO airports: ${departure} to ${arrival}`);
+                debugLog(`Row ${j} FROM/TO airports: ${departure} to ${arrival}`);
             }
         }
 
@@ -1285,31 +1333,15 @@ async function processRow(row, i, j, fromIndex, toIndex) {
                 const parts = routeCell.split('-').map(part => part.trim());
                 if (parts.length >= 2 && isAirportCode(parts[0]) && validAirportCodes.has(parts[0]) &&
                     isAirportCode(parts[1]) && validAirportCodes.has(parts[1])) {
-                    let depCode = parts[0];
-                    let arrCode = parts[1];
-                    if (depCode.length === 3 && remarksAirports.length > 0) {
-                        const possibleICAO = remarksAirports.find(icao => icao.slice(1) === depCode);
-                        depCode = possibleICAO || depCode;
-                    }
-                    if (arrCode.length === 3 && remarksAirports.length > 0) {
-                        const possibleICAO = remarksAirports.find(icao => icao.slice(1) === arrCode);
-                        arrCode = possibleICAO || arrCode;
-                    }
+                    let depCode = normalizeAirportCode(parts[0], remarksAirports);
+                    let arrCode = normalizeAirportCode(parts[1], remarksAirports);
                     departure = depCode;
                     arrival = arrCode;
                     if (parts.length > 2) {
                         const flights = [];
                         for (let p = 0; p < parts.length - 1; p++) {
-                            let depCode = parts[p];
-                            let arrCode = parts[p + 1];
-                            if (depCode.length === 3 && remarksAirports.length > 0) {
-                                const possibleICAO = remarksAirports.find(icao => icao.slice(1) === depCode);
-                                depCode = possibleICAO || depCode;
-                            }
-                            if (arrCode.length === 3 && remarksAirports.length > 0) {
-                                const possibleICAO = remarksAirports.find(icao => icao.slice(1) === arrCode);
-                                arrCode = possibleICAO || arrCode;
-                            }
+                            let depCode = normalizeAirportCode(parts[p], remarksAirports);
+                            let arrCode = normalizeAirportCode(parts[p + 1], remarksAirports);
                             if (isAirportCode(depCode) && validAirportCodes.has(depCode) &&
                                 isAirportCode(arrCode) && validAirportCodes.has(arrCode)) {
                                 const depAirport = getAirport(depCode, remarksAirports);
@@ -1336,23 +1368,16 @@ async function processRow(row, i, j, fromIndex, toIndex) {
                             }
                         }
                         if (flights.length > 0) {
-                            console.log(`Row ${j} multi-segment route:`, flights.map(f => `${f.departure} to ${f.arrival}`));
+                            debugLog(`Row ${j} multi-segment route:`, flights.map(f => `${f.departure} to ${f.arrival}`));
                             resolve(flights);
                             return;
                         }
                     }
                 } else if (parts.length === 1 && isAirportCode(parts[0]) && validAirportCodes.has(parts[0])) {
-                    let routeAirport = parts[0];
-                    if (routeAirport.length === 3 && remarksAirports.length > 0) {
-                        const possibleICAO = remarksAirports.find(icao => icao.slice(1) === routeAirport);
-                        routeAirport = possibleICAO || routeAirport;
-                    }
+                    let routeAirport = normalizeAirportCode(parts[0], remarksAirports);
                     if (fromIndex !== -1 && row[fromIndex]) {
                         let fromCode = row[fromIndex].toUpperCase();
-                        if (fromCode.length === 3 && remarksAirports.length > 0) {
-                            const possibleICAO = remarksAirports.find(icao => icao.slice(1) === fromCode);
-                            fromCode = possibleICAO || fromCode;
-                        }
+                        fromCode = normalizeAirportCode(fromCode, remarksAirports);
                         if (isAirportCode(fromCode) && validAirportCodes.has(fromCode)) {
                             departure = fromCode;
                             arrival = routeAirport;
@@ -1361,26 +1386,20 @@ async function processRow(row, i, j, fromIndex, toIndex) {
                     }
                 }
                 if (parts.length > 0) {
-                    console.log(`Row ${j} Route airports:`, parts.filter(part => isAirportCode(part) && validAirportCodes.has(part)));
+                    debugLog(`Row ${j} Route airports:`, parts.filter(part => isAirportCode(part) && validAirportCodes.has(part)));
                 }
             } else {
                 let fromCode = row[fromIndex].toUpperCase();
                 let toCode = row[toIndex].toUpperCase();
-                if (fromCode.length === 3 && remarksAirports.length > 0) {
-                    const possibleICAO = remarksAirports.find(icao => icao.slice(1) === fromCode);
-                    fromCode = possibleICAO || fromCode;
-                }
-                if (toCode.length === 3 && remarksAirports.length > 0) {
-                    const possibleICAO = remarksAirports.find(icao => icao.slice(1) === toCode);
-                    toCode = possibleICAO || toCode;
-                }
+                fromCode = normalizeAirportCode(fromCode, remarksAirports);
+                toCode = normalizeAirportCode(toCode, remarksAirports);
                 if (isAirportCode(fromCode) && validAirportCodes.has(fromCode)) {
                     departure = fromCode;
                 }
                 if (isAirportCode(toCode) && validAirportCodes.has(toCode)) {
                     arrival = toCode;
                 }
-                console.log(`Row ${j} FROM/TO airports: ${departure || 'none'} to ${arrival || 'none'}`);
+                debugLog(`Row ${j} FROM/TO airports: ${departure || 'none'} to ${arrival || 'none'}`);
             }
         }
 
@@ -1394,21 +1413,11 @@ async function processRow(row, i, j, fromIndex, toIndex) {
                     const parts = cell.split('-').map(part => part.trim());
                     parts.forEach(part => {
                         if (isAirportCode(part) && validAirportCodes.has(part)) {
-                            let code = part;
-                            if (code.length === 3 && remarksAirports.length > 0) {
-                                const possibleICAO = remarksAirports.find(icao => icao.slice(1) === code);
-                                code = possibleICAO || code;
-                            }
+                            let code = normalizeAirportCode(part, remarksAirports);
                             foundAirports.push({ code, index: k });
                         }
                     });
-                    routeSegments.push(...parts.filter(part => isAirportCode(part) && validAirportCodes.has(part)).map(part => {
-                        if (part.length === 3 && remarksAirports.length > 0) {
-                            const possibleICAO = remarksAirports.find(icao => icao.slice(1) === part);
-                            return possibleICAO || part;
-                        }
-                        return part;
-                    }));
+                    routeSegments.push(...parts.filter(part => isAirportCode(part) && validAirportCodes.has(part)).map(part => normalizeAirportCode(part, remarksAirports)));
                 } else {
                     const countryPrefixes = ['K', 'C', 'EG', 'L', 'E', 'Y', 'Z', 'V', 'W', 'T', 'U', 'O', 'F', 'S', 'R', 'M', 'N', 'B', 'D', 'G', 'H', 'I', 'P', 'A'];
                     if (/^[A-Z]{4}$/.test(cell) && validAirportCodes.has(cell) && 
@@ -1446,7 +1455,7 @@ async function processRow(row, i, j, fromIndex, toIndex) {
                     }
                 }
                 if (flights.length > 0) {
-                    console.log(`Row ${j} multi-segment route:`, flights.map(f => `${f.departure} to ${f.arrival}`));
+                    debugLog(`Row ${j} multi-segment route:`, flights.map(f => `${f.departure} to ${f.arrival}`));
                     resolve(flights);
                     return;
                 }
@@ -1465,7 +1474,7 @@ async function processRow(row, i, j, fromIndex, toIndex) {
                 arrival = allAirports[1]?.code;
             } else if (!arrival && remarksAirports.length === 1) {
                 arrival = remarksAirports[0];
-                console.log(`Row ${j} using single Remarks airport as arrival: ${arrival}`);
+                debugLog(`Row ${j} using single Remarks airport as arrival: ${arrival}`);
             }
         }
 
@@ -1473,7 +1482,7 @@ async function processRow(row, i, j, fromIndex, toIndex) {
             const depAirport = getAirport(departure, remarksAirports);
             const arrAirport = getAirport(arrival, remarksAirports);
             if (depAirport && arrAirport) {
-                console.log(`Row ${j} final airports: ${departure} to ${arrival}, Date: ${date}`);
+                debugLog(`Row ${j} final airports: ${departure} to ${arrival}, Date: ${date}`);
                 resolve({
                     departure: depAirport.iata || depAirport.identifier,
                     arrival: arrAirport.iata || arrAirport.identifier,
@@ -1492,11 +1501,11 @@ async function processRow(row, i, j, fromIndex, toIndex) {
                     isLocal: departure === arrival
                 });
             } else {
-                console.log(`Unmatched airports in row ${j}: ${departure}, ${arrival}`, row);
+                debugLog(`Unmatched airports in row ${j}: ${departure}, ${arrival}`, row);
                 resolve(null);
             }
         } else {
-            console.log(`No valid airports in row ${j}:`, row);
+            debugLog(`No valid airports in row ${j}:`, row);
             resolve(null);
         }
     });
