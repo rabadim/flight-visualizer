@@ -866,128 +866,100 @@ function calculateDistance(coords1, coords2) {
     return distance;
 }
 
-// Detect and validate dates in multiple formats
+// --- Date context for row scanning ---
+let lastValidDate = null;
+
+// Enhanced and performance-focused date finding with row context memory
 function findDateInRow(row) {
-    const dateFormats = [
-        { regex: /^\d{1,2}\.\w{3}\.\d{2}$/, splitter: '.', parser: parts => {
-            const month = parts[1].toLowerCase();
-            const validMonths = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-            if (validMonths.includes(month)) {
-                const day = parts[0].padStart(2, '0');
-                const year = `20${parts[2]}`;
-                const monthNum = (validMonths.indexOf(month) + 1).toString().padStart(2, '0');
-                return `${year}-${monthNum}-${day}`;
-            }
-        }},
-        { regex: /^\d{1,2}\/\d{1,2}\/\d{4}$/, splitter: '/', parser: parts => {
-            const month = parseInt(parts[0], 10).toString().padStart(2, '0');
-            const day = parseInt(parts[1], 10).toString().padStart(2, '0');
-            const year = parts[2];
-            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) return `${year}-${month}-${day}`;
-        }},
-        { regex: /^\d{1,2}\/\d{1,2}\/\d{2}$/, splitter: '/', parser: parts => {
-            const month = parseInt(parts[0], 10).toString().padStart(2, '0');
-            const day = parseInt(parts[1], 10).toString().padStart(2, '0');
-            let year = parts[2];
-            year = parseInt(year, 10) < 50 ? `20${year}` : `19${year}`;
-            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) return `${year}-${month}-${day}`;
-        }},
-        { regex: /^\d{1,2}-\d{1,2}-\d{2}$/, splitter: '-', parser: parts => {
-            const month = parseInt(parts[0], 10).toString().padStart(2, '0');
-            const day = parseInt(parts[1], 10).toString().padStart(2, '0');
-            let year = parts[2];
-            year = parseInt(year, 10) < 50 ? `20${year}` : `19${year}`;
-            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) return `${year}-${month}-${day}`;
-        }},
-        { regex: /^\d{4}-\d{1,2}-\d{1,2}$/, splitter: '-', parser: parts => {
-            const year = parts[0];
-            const month = parseInt(parts[1], 10).toString().padStart(2, '0');
-            const day = parseInt(parts[2], 10).toString().padStart(2, '0');
-            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) return `${year}-${month}-${day}`;
-        }},
-        { regex: /^\d{4}\/\d{1,2}\/\d{1,2}$/, splitter: '/', parser: parts => {
-            const year = parts[0];
-            const month = parseInt(parts[1], 10).toString().padStart(2, '0');
-            const day = parseInt(parts[2], 10).toString().padStart(2, '0');
-            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) return `${year}-${month}-${day}`;
-        }},
-        { regex: /^\d{1,2}-\d{1,2}-\d{4}$/, splitter: '-', parser: parts => {
-            const day = parseInt(parts[0], 10).toString().padStart(2, '0');
-            const month = parseInt(parts[1], 10).toString().padStart(2, '0');
-            const year = parts[2];
-            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) return `${year}-${month}-${day}`;
-        }},
-        { regex: /^(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},\s+\d{4}$/i, splitter: null, parser: cell => {
-            const parts = cell.match(/(\w+)\s+(\d{1,2}),\s+(\d{4})/);
-            if (parts) {
-                const month = parts[1].toLowerCase();
-                const validMonths = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-                if (validMonths.includes(month)) {
-                    const day = parseInt(parts[2], 10).toString().padStart(2, '0');
-                    const year = parts[3];
-                    const monthNum = (validMonths.indexOf(month) + 1).toString().padStart(2, '0');
-                    return `${year}-${monthNum}-${day}`;
-                }
-            }
-        }},
-        { regex: /^\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}$/i, splitter: null, parser: cell => {
-            const parts = cell.match(/(\d{1,2})\s+(\w+)\s+(\d{4})/);
-            if (parts) {
-                const day = parseInt(parts[1], 10).toString().padStart(2, '0');
-                const month = parts[2].toLowerCase();
-                const year = parts[3];
-                const validMonths = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-                if (validMonths.includes(month)) {
-                    const monthNum = (validMonths.indexOf(month) + 1).toString().padStart(2, '0');
-                    return `${year}-${monthNum}-${day}`;
-                }
-            }
-        }},
-        { regex: /^\d{4}\.\d{1,2}\.\d{1,2}$/, splitter: '.', parser: parts => {
-            const year = parts[0];
-            const month = parseInt(parts[1], 10).toString().padStart(2, '0');
-            const day = parseInt(parts[2], 10).toString().padStart(2, '0');
-            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) return `${year}-${month}-${day}`;
-        }},
-        { regex: /^\d{1,2}\.\d{1,2}\.\d{4}$/, splitter: '.', parser: parts => {
-            const month = parseInt(parts[0], 10).toString().padStart(2, '0');
-            const day = parseInt(parts[1], 10).toString().padStart(2, '0');
-            const year = parts[2];
-            if (parseInt(day, 10) <= 31 && parseInt(month, 10) <= 12) return `${year}-${month}-${day}`;
-        }}
-    ];
+  const datePatterns = [
+    /\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/,        // MM/DD/YYYY
+    /\b\d{4}-\d{2}-\d{2}\b/,                // YYYY-MM-DD
+    /\b\d{2}-\d{2}-\d{4}\b/,                // DD-MM-YYYY
+    /\b\d{2}\/[A-Za-z]{3}\/\d{2}\b/         // 15/Jul/25
+  ];
 
-    debugLog(`[findDateInRow] Scanning row: ${row.join(' | ')}`);
-
-    for (const cell of row) {
-        if (!cell || typeof cell !== 'string') continue;
-        const trimmedCell = cell.trim();
-        for (const { regex, splitter, parser } of dateFormats) {
-            if (regex.test(trimmedCell)) {
-                let parsedDate;
-                if (splitter) {
-                    const parts = trimmedCell.split(splitter);
-                    parsedDate = parser(parts);
-                } else {
-                    parsedDate = parser(trimmedCell);
-                }
-                if (parsedDate) {
-                    const dateObj = new Date(parsedDate);
-                    if (!isNaN(dateObj.getTime())) {
-                        debugLog(`[findDateInRow] Found valid date: ${parsedDate} from cell: ${trimmedCell}`);
-                        return parsedDate;
-                    } else {
-                        debugLog(`[findDateInRow] Invalid date parsed: ${parsedDate} from cell: ${trimmedCell}`);
-                    }
-                }
-            }
-        }
+  // Only scan first 5 cells for speed
+  for (let i = 0; i < Math.min(row.length, 5); i++) {
+    const cell = row[i];
+    for (const regex of datePatterns) {
+      const match = cell.match(regex);
+      if (match) {
+        lastValidDate = match[0]; // remember for context
+        return match[0];
+      }
     }
+  }
 
-    debugLog(`[findDateInRow] No valid date found in row: ${row.join(' | ')}`);
-    const fallbackDate = new Date().toISOString().split('T')[0];
-    debugLog(`[findDateInRow] Using fallback date: ${fallbackDate}`);
-    return fallbackDate;
+  // Try to infer from broken MM | DD | YY formats
+  const parts = row.slice(0, 3).map(p => parseInt(p, 10)).filter(n => !isNaN(n));
+  if (parts.length === 3 && parts[2] < 100) {
+    const dateGuess = `${String(parts[0]).padStart(2, '0')}/${String(parts[1]).padStart(2, '0')}/20${String(parts[2]).padStart(2, '0')}`;
+    lastValidDate = dateGuess;
+    return dateGuess;
+  }
+
+  // Fallback: reuse previous valid date
+  return lastValidDate;
+}
+
+// Helper: validate airport code (3 or 4 uppercase letters)
+function isValidAirport(code) {
+  return typeof code === 'string' && /^[A-Z]{3,4}$/.test(code.trim());
+}
+
+// Validate a flight row for date and airport codes, with performance and early skip logic
+function validateFlightRow(row, rowIndex) {
+  // Early skip for short/broken rows
+  if (!Array.isArray(row) || row.length < 4) {
+    return {
+      isValid: false,
+      errors: ["Row too short or malformed"],
+      rawText: row,
+      rowIndex: rowIndex ?? -1
+    };
+  }
+
+  // Filter out common time-like noise (e.g., "1:23" or "13:50")
+  const cleanedRow = row.filter(cell => !/^\d{1,2}:\d{2}$/.test(cell));
+  const date = findDateInRow(cleanedRow);
+
+  // Use ICAO format and filter clearly invalid codes
+  const icaoPattern = /^[A-Z]{4}$/;
+  const validAirports = row.filter(code => typeof code === "string" && icaoPattern.test(code.toUpperCase()));
+
+  if (validAirports.length < 2) {
+    return {
+      isValid: false,
+      errors: ["Missing valid airport codes"],
+      rawText: row,
+      rowIndex: rowIndex ?? -1
+    };
+  }
+
+  // Assign departure and arrival, and tag flightType
+  const [departure, arrival] = validAirports;
+  const flightType = (departure === arrival) ? "local" : "normal";
+
+  return {
+    isValid: true,
+    departure,
+    arrival,
+    flightType,
+    rawText: row,
+    rowIndex: rowIndex ?? -1
+  };
+}
+
+// Log a summary of validation results
+function logValidationSummary(results) {
+  const total = results.length;
+  const valid = results.filter(r => r.isValid).length;
+  const invalid = total - valid;
+
+  console.log(`[Flight Log Summary] Total: ${total}, Valid: ${valid}, Invalid: ${invalid}`);
+  results.filter(r => !r.isValid).forEach(r => {
+    console.warn(`Row ${r.rowIndex}: ${r.errors.join(", ")}`);
+  });
 }
 
 function extractDuration(row) {
@@ -1093,55 +1065,76 @@ function parseCSV(csvText) {
         arrIndex = userDefinedToIndex !== -1 ? userDefinedToIndex : headers.findIndex(h => h.includes('to') || h.includes('arr') || h.includes('route'));
     }
 
+    const rows = lines.slice(1).map(line => parseRow(line, delimiter));
+    const allParsedRows = [];
     const newFlights = [];
-    if (depIndex !== -1 && arrIndex !== -1) {
-        for (let i = 1; i < lines.length; i++) {
-            const row = parseRow(lines[i], delimiter);
-            if (row.length < Math.max(depIndex, arrIndex) + 1) continue;
 
-            let departure = '', arrival = '';
-            const routeCell = depIndex === arrIndex ? row[depIndex] : null;
-            if (routeCell && routeCell.includes('-')) {
-                const parts = routeCell.split('-').map(part => part.trim().toUpperCase());
-                if (parts.length >= 2 && isAirportCode(parts[0]) && isAirportCode(parts[1])) {
-                    departure = parts[0];
-                    arrival = parts[1];
-                }
-            } else {
-                departure = row[depIndex].toUpperCase();
-                arrival = row[arrIndex].toUpperCase();
+    rows.forEach((row, index) => {
+        const result = validateFlightRow(row, index + 1); // +1 to match line number after header
+        allParsedRows.push({
+            rowIndex: index + 1,
+            rawText: row,
+            ...result
+        });
+        if (!result.isValid) return; // Skip invalid rows for flight creation
+
+        // Proceed to extract date and airport info from result
+        const { date, validAirports } = result;
+        // Try to extract departure and arrival codes from row, fallback to validAirports
+        let departure = '', arrival = '';
+        const routeCell = depIndex === arrIndex ? row[depIndex] : null;
+        if (routeCell && routeCell.includes('-')) {
+            const parts = routeCell.split('-').map(part => part.trim().toUpperCase());
+            if (parts.length >= 2 && isAirportCode(parts[0]) && isAirportCode(parts[1])) {
+                departure = parts[0];
+                arrival = parts[1];
             }
-            const date = dateIndex !== -1 ? row[dateIndex] : findDateInRow(row);
-
-            const depAirport = getAirport(departure);
-            const arrAirport = getAirport(arrival);
-            const aircraftInfo = extractAircraftInfo(row);
-
-            if (isAirportCode(departure) && isAirportCode(arrival) && depAirport && arrAirport) {
-                const distance = calculateDistance(depAirport.coords, arrAirport.coords);
-                newFlights.push({
-                    coords: [depAirport.coords, arrAirport.coords],
-                    codes: [depAirport.iata || depAirport.identifier, arrAirport.iata || arrAirport.identifier],
-                    date: date,
-                    distance: distance,
-                    duration: extractDuration(row),
-                    notes: '',
-                    aircraftType: aircraftInfo.aircraftType,
-                    registration: aircraftInfo.registration,
-                    crossCountry: extractTime(row, 'cross country'),
-                    night: extractTime(row, 'night'),
-                    solo: extractTime(row, 'solo'),
-                    actualIFR: extractTime(row, 'actual ifr'),
-                    isLocal: depAirport.iata === arrAirport.iata || depAirport.identifier === arrAirport.identifier
-                });
-                updateAirportFrequency(depAirport.iata || depAirport.identifier, arrAirport.iata || arrAirport.identifier);
-                updateRouteFrequency(depAirport.iata || depAirport.identifier, arrAirport.iata || arrAirport.identifier);
-            } else {
-                if (isAirportCode(departure) && !depAirport) missingAirports.add(departure);
-                if (isAirportCode(arrival) && !arrAirport) missingAirports.add(arrival);
-            }
+        } else if (depIndex !== -1 && arrIndex !== -1 && row.length > Math.max(depIndex, arrIndex)) {
+            departure = row[depIndex].toUpperCase();
+            arrival = row[arrIndex].toUpperCase();
         }
-    }
+        // Fallback to validAirports if above doesn't work
+        if ((!departure || !arrival) && validAirports.length >= 2) {
+            departure = validAirports[0];
+            arrival = validAirports[1];
+        }
+        const depAirport = getAirport(departure);
+        const arrAirport = getAirport(arrival);
+        const aircraftInfo = extractAircraftInfo(row);
+
+        if (isAirportCode(departure) && isAirportCode(arrival) && depAirport && arrAirport) {
+            const distance = calculateDistance(depAirport.coords, arrAirport.coords);
+            newFlights.push({
+                coords: [depAirport.coords, arrAirport.coords],
+                codes: [depAirport.iata || depAirport.identifier, arrAirport.iata || arrAirport.identifier],
+                date: date,
+                distance: distance,
+                duration: extractDuration(row),
+                notes: '',
+                aircraftType: aircraftInfo.aircraftType,
+                registration: aircraftInfo.registration,
+                crossCountry: extractTime(row, 'cross country'),
+                night: extractTime(row, 'night'),
+                solo: extractTime(row, 'solo'),
+                actualIFR: extractTime(row, 'actual ifr'),
+                isLocal: depAirport.iata === arrAirport.iata || depAirport.identifier === arrAirport.identifier
+            });
+            updateAirportFrequency(depAirport.iata || depAirport.identifier, arrAirport.iata || arrAirport.identifier);
+            updateRouteFrequency(depAirport.iata || depAirport.identifier, arrAirport.iata || arrAirport.identifier);
+        } else {
+            if (isAirportCode(departure) && !depAirport) missingAirports.add(departure);
+            if (isAirportCode(arrival) && !arrAirport) missingAirports.add(arrival);
+        }
+    });
+
+    // Log validation summary after all rows processed
+    logValidationSummary(allParsedRows);
+
+    // Store allParsedRows for future use
+    logbooks[currentLogbook].allParsedRows = allParsedRows;
+
+    // Show invalid rows UI after validation
+    showInvalidRowsUI(logbooks[currentLogbook].allParsedRows);
 
     if (newFlights.length > 0) {
         logbooks[currentLogbook].flights.push(...newFlights);
@@ -1150,7 +1143,6 @@ function parseCSV(csvText) {
         userDefinedToIndex = -1;
         pendingCSVText = null;
     } else {
-        const rows = lines.map(line => parseRow(line, delimiter));
         showColumnMappingUI(rows, true, csvText);
     }
 }
