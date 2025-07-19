@@ -1065,6 +1065,13 @@ function parseCSV(csvText) {
         arrIndex = userDefinedToIndex !== -1 ? userDefinedToIndex : headers.findIndex(h => h.includes('to') || h.includes('arr') || h.includes('route'));
     }
 
+    // Inserted block: try to auto-detect columns if still not found
+    if (depIndex === -1 || arrIndex === -1) {
+        const { fromIndex: autoFrom, toIndex: autoTo } = detectAirportColumns(headers);
+        depIndex = depIndex === -1 ? autoFrom : depIndex;
+        arrIndex = arrIndex === -1 ? autoTo : arrIndex;
+    }
+
     const rows = lines.slice(1).map(line => parseRow(line, delimiter));
     const allParsedRows = [];
     const newFlights = [];
@@ -1225,6 +1232,8 @@ async function showColumnMappingUI(rows, isCSV = false, csvText = null) {
 // Process a single row asynchronously
 async function processRow(row, i, j, fromIndex, toIndex) {
     return new Promise(resolve => {
+        // Performance: sanitize row at the start
+        row = sanitizeFlightRow(row);
         let departure = '', arrival = '';
         // Try to find date in a column labeled 'DATE' first
         let date = 'N/A';
@@ -1275,8 +1284,9 @@ async function processRow(row, i, j, fromIndex, toIndex) {
             for (let p = 0; p < remarksAirports.length - 1; p++) {
                 const depCode = remarksAirports[p];
                 const arrCode = remarksAirports[p + 1];
-                const depAirport = getAirport(depCode, remarksAirports);
-                const arrAirport = getAirport(arrCode, remarksAirports);
+                // Performance: use getAirportByCodeFast
+                const depAirport = getAirportByCodeFast(depCode);
+                const arrAirport = getAirportByCodeFast(arrCode);
                 if (depAirport && arrAirport) {
                     flights.push({
                         departure: depAirport.iata || depAirport.identifier,
@@ -1336,8 +1346,8 @@ async function processRow(row, i, j, fromIndex, toIndex) {
                             let arrCode = normalizeAirportCode(parts[p + 1], remarksAirports);
                             if (isAirportCode(depCode) && validAirportCodes.has(depCode) &&
                                 isAirportCode(arrCode) && validAirportCodes.has(arrCode)) {
-                                const depAirport = getAirport(depCode, remarksAirports);
-                                const arrAirport = getAirport(arrCode, remarksAirports);
+                                const depAirport = getAirportByCodeFast(depCode);
+                                const arrAirport = getAirportByCodeFast(arrCode);
                                 if (depAirport && arrAirport) {
                                     flights.push({
                                         departure: depAirport.iata || depAirport.identifier,
@@ -1424,8 +1434,8 @@ async function processRow(row, i, j, fromIndex, toIndex) {
                 for (let p = 0; p < routeSegments.length - 1; p++) {
                     const depCode = routeSegments[p];
                     const arrCode = routeSegments[p + 1];
-                    const depAirport = getAirport(depCode, remarksAirports);
-                    const arrAirport = getAirport(arrCode, remarksAirports);
+                    const depAirport = getAirportByCodeFast(depCode);
+                    const arrAirport = getAirportByCodeFast(arrCode);
                     if (depAirport && arrAirport) {
                         flights.push({
                             departure: depAirport.iata || depAirport.identifier,
@@ -1471,8 +1481,9 @@ async function processRow(row, i, j, fromIndex, toIndex) {
         }
 
         if (departure && arrival) {
-            const depAirport = getAirport(departure, remarksAirports);
-            const arrAirport = getAirport(arrival, remarksAirports);
+            // Performance: use getAirportByCodeFast for main airport lookups
+            const depAirport = getAirportByCodeFast(departure);
+            const arrAirport = getAirportByCodeFast(arrival);
             if (depAirport && arrAirport) {
                 debugLog(`Row ${j} final airports: ${departure} to ${arrival}, Date: ${date}`);
                 resolve({
@@ -1640,7 +1651,8 @@ async function parsePDF(input) {
                 const batchResults = await Promise.all(batchPromises);
                 const validRows = batchResults.flat().filter(row => row !== null);
                 allRows.push(...validRows);
-                progressElement.style.width = `${((processedPages + j / rows.length) / totalPages) * 100}%`;
+                // Performance: throttle progress bar update
+                updateProgressBarThrottled(((processedPages + j / rows.length) / totalPages) * 100);
             }
 
             processedPages++;
@@ -1941,4 +1953,168 @@ function drawFlights(autoOpenPopups = false) {
     document.getElementById('total-distance').textContent = `Total Distance: ${totalDistance.toFixed(2)} km`;
 
     airportVisits.size > 0 ? map.fitBounds(bounds, { padding: [50, 50] }) : map.setView([0, 0], 2);
+}
+
+// ===========================
+// 🔍 Extended Date Parser Additions (Non-Destructive)
+// ===========================
+
+const extendedDateFormats = [
+  { regex: /^\d{1,2}\/\d{1,2}\/\d{2}$/, format: 'M/D/YY' },
+  { regex: /^\d{1,2}\/\d{1,2}\/\d{4}$/, format: 'M/D/YYYY' },
+  { regex: /^\d{1,2}\.\d{1,2}\.\d{4}$/, format: 'DD.MM.YYYY' },
+  { regex: /^\d{1,2}-\d{1,2}-\d{2}$/, format: 'D-M-YY' },
+  { regex: /^[A-Za-z]+ \d{1,2}, \d{4}$/, format: 'Month D, YYYY' },
+  { regex: /^\d{1,2}\/\d{1,2}\/\d{2,4} *- *\d{1,2}\/\d{1,2}\/\d{2,4}$/, format: 'Range' }
+];
+
+function tryParseExtendedDate(str) {
+  str = str.trim();
+  for (const fmt of extendedDateFormats) {
+    if (fmt.regex.test(str)) {
+      try {
+        if (fmt.format === 'Range') {
+          const parts = str.split('-').map(s => s.trim());
+          const dateObj = new Date(parts[1]);
+          if (!isNaN(dateObj)) return dateObj;
+        } else if (fmt.format === 'Month D, YYYY') {
+          const dateObj = new Date(str);
+          if (!isNaN(dateObj)) return dateObj;
+        } else if (fmt.format === 'DD.MM.YYYY') {
+          const [d, m, y] = str.split('.').map(n => parseInt(n, 10));
+          return new Date(y, m - 1, d);
+        } else if (fmt.format === 'D-M-YY') {
+          const [d, m, y] = str.split('-').map(n => parseInt(n, 10));
+          const fullYear = y < 50 ? 2000 + y : 1900 + y;
+          return new Date(fullYear, m - 1, d);
+        } else {
+          const dateObj = new Date(str);
+          if (!isNaN(dateObj)) return dateObj;
+        }
+      } catch (_) {}
+    }
+  }
+  return null;
+}
+
+function findDateInRowExtended(rowArray) {
+  for (const cell of rowArray) {
+    const cleaned = String(cell).replace(/[^\w\s/.,-]/g, '').trim();
+    const parsed = tryParseExtendedDate(cleaned);
+    if (parsed) return parsed;
+  }
+  return null;
+}
+
+function getDateFromRow(rowArray) {
+  const baseDate = typeof findDateInRow === 'function' ? findDateInRow(rowArray) : null;
+  if (baseDate) return baseDate;
+
+  const fallback = findDateInRowExtended(rowArray);
+  if (fallback) {
+    debugLog('[ExtendedDateParser] Fallback date detected:', fallback.toISOString());
+    return fallback;
+  }
+
+  return null;
+}
+// ===========================
+// 🚀 Performance Optimizations (Non-Intrusive)
+// ===========================
+
+// Memoization for airport lookups
+const airportCodeCache = {};
+
+function getAirportByCodeFast(code) {
+  const cleanCode = code?.toUpperCase().trim();
+  if (!cleanCode) return null;
+  if (airportCodeCache[cleanCode]) return airportCodeCache[cleanCode];
+
+  const index = airportsData.code_to_airport_id?.[cleanCode];
+  if (index !== undefined && airportsData.airports && airportsData.airports[index]) {
+    airportCodeCache[cleanCode] = airportsData.airports[index];
+    return airportsData.airports[index];
+  }
+  return null;
+}
+
+// Batch-safe progress updater (use only if needed)
+let lastProgressUpdate = 0;
+function updateProgressBarThrottled(percent) {
+  const now = performance.now();
+  if (now - lastProgressUpdate > 33) { // 30 FPS max
+    const bar = document.getElementById("logbook-progress");
+    if (bar) bar.style.width = `${percent}%`;
+    lastProgressUpdate = now;
+  }
+}
+
+// Flight row sanitizer (avoid redoing string ops)
+function sanitizeFlightRow(row) {
+  return row.map(cell =>
+    typeof cell === 'string' ? cell.trim().toUpperCase() : cell
+  );
+}
+// Function to detect "from" and "to" columns in headers
+function detectAirportColumns(headers) {
+  const lowerHeaders = headers.map(h => h.toLowerCase().trim());
+  let fromIndex = lowerHeaders.findIndex(h => ['from', 'dep', 'departure', 'origin'].includes(h));
+  let toIndex = lowerHeaders.findIndex(h => ['to', 'arr', 'arrival', 'destination'].includes(h));
+  if (fromIndex === -1 || toIndex === -1) {
+    debugLog('[detectAirportColumns] Could not detect reliable from/to indices.', lowerHeaders);
+  } else {
+    debugLog(`[detectAirportColumns] Detected fromIndex=${fromIndex}, toIndex=${toIndex}`);
+  }
+  return { fromIndex, toIndex };
+}
+// ===========================
+// 🧪 Date Sanity Checker and Fallback Override
+// ===========================
+
+function isPlausibleDate(dateObj) {
+  if (!(dateObj instanceof Date) || isNaN(dateObj)) return false;
+  const year = dateObj.getFullYear();
+  const month = dateObj.getMonth() + 1;
+  const day = dateObj.getDate();
+  return (
+    year > 1900 && year <= new Date().getFullYear() + 1 &&
+    month >= 1 && month <= 12 &&
+    day >= 1 && day <= 31
+  );
+}
+
+// Override the original findDateInRow to improve fallback handling
+const originalFindDateInRow = findDateInRow;
+findDateInRow = function(row) {
+  const date = originalFindDateInRow(row);
+  if (isPlausibleDate(new Date(date))) return date;
+
+  const fallback = findDateInRowExtended(row);
+  if (fallback && isPlausibleDate(fallback)) return fallback.toISOString().split('T')[0];
+  return null;
+};
+
+// ===========================
+// ✅ Confirm validAirportCodes Initialization
+// ===========================
+if (typeof validAirportCodes !== 'undefined' && validAirportCodes.size !== undefined) {
+  setTimeout(() => {
+    debugLog(`[Airports] Loaded ${validAirportCodes.size} valid airport codes from airports.json`);
+  }, 1000);
+}
+// ===========================
+// 🛠 Diagnostic Logs for Remarks Pairing Failures
+// ===========================
+function validateAndPairRemarks(remarksAirports) {
+  const pairs = [];
+  for (let i = 0; i < remarksAirports.length - 1; i++) {
+    const from = getAirportByCodeFast(remarksAirports[i]);
+    const to = getAirportByCodeFast(remarksAirports[i + 1]);
+    if (!from || !to) {
+      console.warn(`[remarksAirports] Could not resolve pair: ${remarksAirports[i]} → ${remarksAirports[i + 1]}`);
+      continue;
+    }
+    pairs.push([from, to]);
+  }
+  return pairs;
 }
