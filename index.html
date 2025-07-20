@@ -8,12 +8,27 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
     <link rel="stylesheet" href="styles.css">
+
+    <!-- Performance: Preconnect to external CDN resources -->
+    <link rel="preconnect" href="https://unpkg.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+
+    <!-- Favicon: Emoji-based fallback -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>">
+
+    <!-- JavaScript Libraries with defer -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+    <script src="https://unpkg.com/leaflet-image@0.4.0/leaflet-image.js" defer></script>
+    <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js" defer></script>
+    <script src="https://unpkg.com/tesseract.js@5.1.0/dist/tesseract.min.js" defer></script>
+    <script src="script.js" defer></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
+<main class="flex-1 flex flex-col">
     <!-- Backdrop for Menu Overlay -->
-    <div id="menu-backdrop" class="fixed inset-0 bg-black bg-opacity-50 z-900 hidden"></div>
+    <div id="menu-backdrop" class="fixed inset-0 bg-black bg-opacity-50 z-900 hidden"></div> <!-- z-900: menu-backdrop z-index -->
     <!-- Loading Indicator for Download -->
-    <div id="loading-indicator" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-1200 hidden">
+    <div id="loading-indicator" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-1200 hidden"> <!-- z-1200: loading-indicator z-index -->
         <div class="bg-white p-4 rounded-md shadow-lg text-center">
             <p class="text-gray-800">Downloading map...</p>
         </div>
@@ -34,15 +49,15 @@
         </div>
     </div>
     <!-- Notification for Tile Loading Errors -->
-    <div id="tile-error" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white p-2 rounded-md z-1200 hidden">
+    <div id="tile-error" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white p-2 rounded-md z-1200 hidden"> <!-- z-1200: tile-error z-index -->
         <p>Failed to load dark map tiles. Please try another style.</p>
     </div>
     <!-- Notification for File Parsing Errors -->
-    <div id="file-error" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white p-4 rounded-md z-1200 hidden">
+    <div id="file-error" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white p-4 rounded-md z-1200 hidden"> <!-- z-1200: file-error z-index -->
         <p id="error-message">Failed to parse file. Please ensure it contains valid flight data.</p>
     </div>
     <!-- Upper-Right Menu Button -->
-    <button id="menu-toggle" class="fixed top-4 right-4 z-1100 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700" aria-label="Open Menu">
+    <button id="menu-toggle" class="fixed top-4 right-4 z-1100 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700" aria-label="Open Menu"> <!-- z-1100: menu-toggle z-index -->
         <svg id="menu-icon-open" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
         </svg>
@@ -51,7 +66,7 @@
         </svg>
     </button>
     <!-- Menu Overlay -->
-    <div id="menu-overlay" class="fixed top-0 right-0 h-full w-80 bg-white shadow-lg z-1000 transform translate-x-full transition-transform duration-300 overflow-y-auto">
+    <div id="menu-overlay" class="fixed top-0 right-0 h-full w-80 bg-white shadow-lg z-1000 transform translate-x-full transition-transform duration-300 overflow-y-auto"> <!-- z-1000: menu-overlay z-index -->
         <!-- Sticky Header -->
         <div class="menu-header p-6 border-b border-gray-200">
             <div class="flex justify-between items-center">
@@ -67,6 +82,7 @@
             </button>
             <!-- Menu Sections Container -->
             <div id="menu-sections" class="space-y-6">
+                <!-- ========== MENU: FLIGHT MANAGEMENT ========== -->
                 <!-- Flight Management Section -->
                 <div class="section" data-section-id="flight-management">
                     <h3 class="text-lg font-bold text-gray-800 mb-2 flex items-center">
@@ -110,6 +126,7 @@
                         </div>
                     </div>
                 </div>
+                <!-- ========== MENU: MAP CONTROLS ========== -->
                 <!-- Map Controls Section -->
                 <div class="section" data-section-id="map-controls">
                     <h3 class="text-lg font-bold text-gray-800 mb-2 flex items-center">
@@ -129,6 +146,7 @@
                         <span data-icon="eye" class="mr-2"></span>Show/Hide Local Flights
                     </button>
                 </div>
+                <!-- ========== MENU: FILTERS & SORTING ========== -->
                 <!-- Filters & Sorting Section -->
                 <div class="section" data-section-id="filters-sorting">
                     <h3 class="text-lg font-bold text-gray-800 mb-2 flex items-center">
@@ -179,6 +197,7 @@
                         </div>
                     </div>
                 </div>
+                <!-- ========== MENU: LOGBOOK MANAGEMENT ========== -->
                 <!-- Logbook Management Section -->
                 <div class="section" data-section-id="logbook-management">
                     <h3 class="text-lg font-bold text-gray-800 mb-2 flex items-center">
@@ -202,6 +221,7 @@
                         <span data-icon="file-export" class="mr-2"></span>Export Flights to CSV
                     </button>
                 </div>
+                <!-- ========== MENU: ADD MISSING AIRPORT ========== -->
                 <!-- Add Missing Airport Section -->
                 <div class="section" data-section-id="add-missing-airport">
                     <button id="toggle-missing-airport-btn" class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 flex items-center justify-between">
@@ -230,6 +250,7 @@
                         </button>
                     </div>
                 </div>
+                <!-- ========== MENU: FLIGHT STATS ========== -->
                 <!-- Flight Stats Section -->
                 <div class="section" data-section-id="flight-stats">
                     <h3 class="text-lg font-bold text-gray-800 mb-2 flex items-center">
@@ -296,7 +317,7 @@
         </div>
     </div>
     <!-- Reorder Menu Overlay -->
-    <div id="reorder-menu-overlay" class="fixed top-0 right-0 h-full w-80 bg-white shadow-lg z-1100 transform translate-x-full transition-transform duration-300 overflow-y-auto">
+    <div id="reorder-menu-overlay" class="fixed top-0 right-0 h-full w-80 bg-white shadow-lg z-1100 transform translate-x-full transition-transform duration-300 overflow-y-auto"> <!-- z-1100: reorder-menu-overlay z-index -->
         <div class="p-6 border-b border-gray-200">
             <div class="flex justify-between items-center">
                 <h2 class="text-xl font-bold text-gray-800">Reorder Menu</h2>
@@ -314,10 +335,6 @@
     <!-- Full-Screen 2D Map -->
     <div id="map" class="flex-1 h-screen"></div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet-image@0.4.0/leaflet-image.js"></script>
-    <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
-    <script src="https://unpkg.com/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
-    <script src="script.js"></script>
+</main>
 </body>
 </html>

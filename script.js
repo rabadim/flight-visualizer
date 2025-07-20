@@ -693,18 +693,29 @@ headerKeywords = [
 
 summaryIndicators = ['TOTAL', 'FORWARDED', 'PAGE', 'THIS', 'REPORT', 'SUBTOTAL', 'CARRIED FORWARD'];
 
+const airportCodeCheckCache = new Map();
+
 function isAirportCode(str) {
-    const excludedTerms = [
-        'ILS', 'LOC', 'VOR', 'NDB', 'GPS', 'DME', 'RNAV', 'TACAN',
-        'CRJ', 'FAA', 'A320', 'B737', 'B747', 'B757', 'B767', 'B777', 'B787',
-        'E170', 'E175', 'E190', 'E195', 'FRASCA', 'AVENGER', 'SIM', 'FTD',
-        'DAY', 'NIGHT', 'TYPE', 'TOTAL', 'OUT', 'IN', 'PIC', 'SIC', 'SOLO',
-        'CFI', 'DPE', 'MEI', 'VMC', 'PPL', 'AND'
-    ];
+    const excludedTerms = new Set([
+      'ILS', 'LOC', 'VOR', 'NDB', 'GPS', 'DME', 'RNAV', 'TACAN',
+      'CRJ', 'FAA', 'A320', 'B737', 'B747', 'B757', 'B767', 'B777', 'B787',
+      'E170', 'E175', 'E190', 'E195', 'FRASCA', 'AVENGER', 'SIM', 'FTD',
+      'DAY', 'NIGHT', 'TYPE', 'TOTAL', 'OUT', 'IN', 'PIC', 'SIC', 'SOLO',
+      'CFI', 'DPE', 'MEI', 'VMC', 'PPL', 'AND'
+    ]);
+
     const upperStr = str.toUpperCase();
-    return /^[A-Z]{3,4}$/.test(str) &&
-           !excludedTerms.includes(upperStr) &&
-           validAirportCodes.has(upperStr);
+
+    if (airportCodeCheckCache.has(upperStr)) {
+      return airportCodeCheckCache.get(upperStr);
+    }
+
+    const isValid = /^[A-Z]{3,4}$/.test(upperStr) &&
+                    !excludedTerms.has(upperStr) &&
+                    validAirportCodes.has(upperStr);
+
+    airportCodeCheckCache.set(upperStr, isValid);
+    return isValid;
 }
 
 function isLikelyHeader(row) {
@@ -826,6 +837,8 @@ function normalizeAirportCode(code, icaoList) {
 function parseRow(line, delimiter) {
     return line.split(delimiter).map(cell => cell.trim().replace(/"/g, ''));
 }
+
+
 
 
 function getCoords(airport) {
@@ -1234,6 +1247,15 @@ async function processRow(row, i, j, fromIndex, toIndex) {
     return new Promise(resolve => {
         // Performance: sanitize row at the start
         row = sanitizeFlightRow(row);
+
+        // ===========================
+        // 🧹 OCR Garbage Row Filter
+        // ===========================
+        if (isGarbageRow(row)) {
+            debugLog(`[Skipped] Garbage row at index ${j}:`, row);
+            resolve(null);
+            return;
+        }
         let departure = '', arrival = '';
         // Try to find date in a column labeled 'DATE' first
         let date = 'N/A';
@@ -1512,6 +1534,28 @@ async function processRow(row, i, j, fromIndex, toIndex) {
             resolve(null);
         }
     });
+}
+
+// ===========================
+// 🧹 OCR Garbage Row Filter
+// ===========================
+function isGarbageRow(row) {
+    const joined = row.join(" ").toLowerCase().trim();
+
+    // Too few entries or mostly empty
+    if (row.length < 3 || joined.length < 5) return true;
+
+    // Common noise patterns
+    if (/signature|pilot[:]?|crew[:]?|logbook|endorsement/.test(joined)) return true;
+
+    // Row full of colons or durations like "44:05", "1:15", etc.
+    const hasMostlyDurations = row.filter(cell => typeof cell === 'string' && /^\d{1,2}:\d{2}$/.test(cell.trim())).length >= row.length - 1;
+    if (hasMostlyDurations) return true;
+
+    // Single word rows or large numeric strings
+    if (/^\d{4,}$/.test(joined.replace(/\s/g, ''))) return true;
+
+    return false;
 }
 
 async function parsePDF(input) {
@@ -2117,4 +2161,38 @@ function validateAndPairRemarks(remarksAirports) {
     pairs.push([from, to]);
   }
   return pairs;
+}
+// ===========================
+// 🧩 Fallback to Remarks Airports When From/To Are Missing
+// ===========================
+function getAirportByCodeFast(code) {
+  if (!code) return null;
+  const upper = code.toUpperCase();
+  if (airportsData && airportsData.code_to_airport && airportsData.code_to_airport[upper]) {
+    return airportsData.code_to_airport[upper];
+  }
+  return null;
+}
+
+function getAirportsFromRow(row) {
+  let fromCode = (typeof fromIndex !== 'undefined' && fromIndex !== -1 && row[fromIndex]) ? row[fromIndex].toUpperCase().trim() : null;
+  let toCode = (typeof toIndex !== 'undefined' && toIndex !== -1 && row[toIndex]) ? row[toIndex].toUpperCase().trim() : null;
+
+  let from = getAirportByCodeFast(fromCode);
+  let to = getAirportByCodeFast(toCode);
+
+  // If either is invalid, attempt fallback using remarks
+  if (!from || !to) {
+    const remarksAirports = (row.join(" ").match(/\b[A-Z]{3,4}\b/g) || []).filter(code => getAirportByCodeFast(code));
+    if (remarksAirports.length >= 2) {
+      from = getAirportByCodeFast(remarksAirports[0]);
+      to = getAirportByCodeFast(remarksAirports[1]);
+      debugLog('[Fallback] Using remarks for from/to:', remarksAirports[0], remarksAirports[1]);
+    } else if (remarksAirports.length === 1 && !to) {
+      to = getAirportByCodeFast(remarksAirports[0]);
+      debugLog('[Fallback] Using single remarks airport as arrival:', remarksAirports[0]);
+    }
+  }
+
+  return { from, to };
 }

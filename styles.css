@@ -1,3 +1,12 @@
+:root {
+  --z-map: 1;
+  --z-backdrop: 900;
+  --z-menu: 1000;
+  --z-toggle: 1100;
+  --z-loading: 1200;
+  --z-tooltip: 1300;
+}
+
 body {
     background-image: url('https://source.unsplash.com/1600x900/?sky,clouds');
     background-size: cover;
@@ -6,16 +15,18 @@ body {
     margin: 0;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     color: #333;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 #map {
     width: 100%;
     height: 100vh;
-    z-index: 1; /* Remove border to eliminate visible edges */
+    z-index: var(--z-map); /* Remove border to eliminate visible edges */
 }
 
 .leaflet-container {
-    z-index: 1;
+    z-index: var(--z-map);
     transition: filter 0.3s ease;
 }
 
@@ -24,13 +35,13 @@ body {
 }
 
 #menu-backdrop {
-    z-index: 900;
+    z-index: var(--z-backdrop);
     transition: opacity 0.3s ease;
 }
 
 #menu-overlay {
-    z-index: 1000;
-    transition: transform 0.3s ease, opacity 0.3s ease;
+    z-index: var(--z-menu);
+    transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease;
     opacity: 1;
     box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
     overflow-y: auto;
@@ -41,7 +52,7 @@ body {
 }
 
 #menu-toggle {
-    z-index: 1100 !important;
+    z-index: var(--z-toggle) !important;
     transition: background-color 0.2s ease;
     display: block !important;
     position: fixed !important;
@@ -53,7 +64,7 @@ body {
 #map-style-loading,
 #tile-error,
 #file-error {
-    z-index: 1200;
+    z-index: var(--z-loading);
     transition: opacity 0.3s ease;
 }
 
@@ -176,7 +187,7 @@ body {
     position: sticky;
     top: 0;
     background-color: white;
-    z-index: 1002;
+    z-index: calc(var(--z-menu) + 2);
 }
 
 .dark-mode #menu-overlay .menu-header {
@@ -242,7 +253,7 @@ body {
 /* Button Visual Feedback */
 #menu-overlay button {
     position: relative;
-    z-index: 1001;
+    z-index: calc(var(--z-menu) + 1);
     pointer-events: auto;
     transition: transform 0.1s ease, background-color 0.2s ease;
 }
@@ -279,7 +290,7 @@ body {
     border-radius: 4px;
     font-size: 0.75rem;
     white-space: nowrap;
-    z-index: 1003;
+    z-index: var(--z-tooltip);
     opacity: 0.9;
 }
 
@@ -343,7 +354,7 @@ body {
 #reorder-menu-overlay {
     transform: translateX(100%);
     transition: transform 0.3s ease;
-    z-index: 1200;
+    z-index: var(--z-loading);
 }
 
 #reorder-menu-overlay.open {
@@ -374,4 +385,9 @@ body {
 }
 #column-mapping-container input[type="checkbox"] {
     accent-color: #3388ff;
+}
+
+button:focus-visible {
+  outline: 2px solid #3388ff;
+  outline-offset: 2px;
 }
