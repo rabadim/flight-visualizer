@@ -66,7 +66,7 @@
         </svg>
     </button>
     <!-- Menu Overlay -->
-    <div id="menu-overlay" class="fixed top-0 right-0 h-full w-80 bg-white shadow-lg z-1000 transform translate-x-full transition-transform duration-300 overflow-y-auto"> <!-- z-1000: menu-overlay z-index -->
+    <div id="menu-overlay" class="sidebar-glass fixed top-0 right-0 h-full w-80 z-1000 transform translate-x-full transition-transform duration-300 overflow-y-auto"> <!-- z-1000: menu-overlay z-index -->
         <!-- Sticky Header -->
         <div class="menu-header p-6 border-b border-gray-200">
             <div class="flex justify-between items-center">
@@ -90,7 +90,7 @@
                     </h3>
                     <!-- Upload Logbook -->
                     <div class="collapsible-section">
-                        <button id="toggle-logbook-btn" class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 flex items-center justify-between">
+                        <button id="toggle-logbook-btn" class="btn-gradient w-full flex items-center justify-between">
                             <span class="flex items-center">
                                 <span data-icon="upload" class="mr-2"></span>
                                 <span class="text-label">Upload Logbook</span>
@@ -104,7 +104,7 @@
                     </div>
                     <!-- Add Flight -->
                     <div class="collapsible-section mt-2">
-                        <button id="toggle-form-btn" class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 flex items-center justify-between">
+                        <button id="toggle-form-btn" class="btn-gradient w-full flex items-center justify-between">
                             <span class="flex items-center">
                                 <span data-icon="plane-departure" class="mr-2"></span>
                                 <span class="text-label">Add Flight</span>
@@ -120,7 +120,7 @@
                                 <label for="arrival" class="text-sm font-medium text-gray-800">Arrival Airport</label>
                                 <input type="text" id="arrival" class="mt-1 p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., KTUS">
                             </div>
-                            <button id="submit-flight" class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 flex items-center">
+                            <button id="submit-flight" class="btn-gradient w-full flex items-center justify-center">
                                 <span data-icon="check" class="mr-2"></span>Submit Flight
                             </button>
                         </div>
@@ -139,10 +139,10 @@
                             <option value="satellite">Satellite</option>
                         </select>
                     </div>
-                    <button id="theme-toggle" class="w-full bg-gray-600 text-white p-2 rounded-md hover:bg-gray-700 mt-2 flex items-center">
+                    <button id="theme-toggle" class="btn-gradient w-full mt-2 flex items-center justify-center">
                         <span data-icon="adjust" class="mr-2"></span>Toggle Dark Mode
                     </button>
-                    <button id="toggle-local-flights-btn" class="w-full bg-gray-600 text-white p-2 rounded-md hover:bg-gray-700 mt-2 flex items-center" title="Show or hide flights that start and end at the same airport">
+                    <button id="toggle-local-flights-btn" class="btn-gradient w-full mt-2 flex items-center justify-center" title="Show or hide flights that start and end at the same airport">
                         <span data-icon="eye" class="mr-2"></span>Show/Hide Local Flights
                     </button>
                 </div>
@@ -154,7 +154,7 @@
                     </h3>
                     <!-- Filter by Date Range -->
                     <div class="collapsible-section">
-                        <button id="toggle-date-filter-btn" class="w-full bg-green-600 text-white p-2 rounded-md hover:bg-green-700 flex items-center justify-between" title="Show flights within a specific date range">
+                        <button id="toggle-date-filter-btn" class="btn-gradient w-full flex items-center justify-between" title="Show flights within a specific date range">
                             <span class="flex items-center">
                                 <span data-icon="calendar-alt" class="mr-2"></span>Filter by Date Range
                             </span>
@@ -165,14 +165,14 @@
                             <input type="date" id="start-date" class="border p-1 w-full rounded-md">
                             <label class="block mt-2 text-sm font-medium text-gray-700">End Date:</label>
                             <input type="date" id="end-date" class="border p-1 w-full rounded-md">
-                            <button id="apply-date-filter" class="w-full bg-green-600 text-white p-2 rounded-md hover:bg-green-700 flex items-center">
+                            <button id="apply-date-filter" class="btn-gradient w-full flex items-center justify-center">
                                 <span data-icon="check" class="mr-2"></span>Apply Date Filter
                             </button>
                         </div>
                     </div>
                     <!-- Filter Flights -->
                     <div class="collapsible-section mt-2">
-                        <button id="toggle-filter-flights-btn" class="w-full bg-green-600 text-white p-2 rounded-md hover:bg-green-700 flex items-center justify-between" title="Filter flights by departure or arrival airport and sort by various criteria">
+                        <button id="toggle-filter-flights-btn" class="btn-gradient w-full flex items-center justify-between" title="Filter flights by departure or arrival airport and sort by various criteria">
                             <span class="flex items-center">
                                 <span data-icon="sort" class="mr-2"></span>Filter Flights
                             </span>
@@ -191,7 +191,7 @@
                                 <option value="distance-desc">Distance (Descending)</option>
                                 <option value="frequency-desc">Route Frequency (Descending)</option>
                             </select>
-                            <button id="apply-filter-sort" class="w-full bg-green-600 text-white p-2 rounded-md hover:bg-green-700 flex items-center">
+                            <button id="apply-filter-sort" class="btn-gradient w-full flex items-center justify-center">
                                 <span data-icon="filter" class="mr-2"></span>Filter Flights
                             </button>
                         </div>
@@ -208,23 +208,23 @@
                             <option value="Logbook 1">Logbook 1</option>
                         </select>
                     </div>
-                    <button id="add-logbook" class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 mt-2 flex items-center">
+                    <button id="add-logbook" class="btn-gradient w-full flex items-center justify-center mt-2">
                         <span data-icon="plus" class="mr-2"></span>Add New Logbook
                     </button>
-                    <button id="clear-flights-btn" class="w-full bg-red-600 text-white p-2 rounded-md hover:bg-red-700 mt-2 flex items-center" title="Remove all flights from the current logbook">
+                    <button id="clear-flights-btn" class="btn-gradient w-full mt-2 flex items-center justify-center" title="Remove all flights from the current logbook">
                         <span data-icon="trash" class="mr-2"></span>Clear Flights
                     </button>
-                    <button id="download-btn" class="w-full bg-green-600 text-white p-2 rounded-md hover:bg-blue-700 mt-2 flex items-center" title="Download the current map as a PNG image">
+                    <button id="download-btn" class="btn-gradient w-full mt-2 flex items-center justify-center" title="Download the current map as a PNG image">
                         <span data-icon="download" class="mr-2"></span>Download Map
                     </button>
-                    <button id="export-flights-btn" class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 mt-2 flex items-center" title="Download your flights as a CSV file">
+                    <button id="export-flights-btn" class="btn-gradient w-full flex items-center justify-center mt-2" title="Download your flights as a CSV file">
                         <span data-icon="file-export" class="mr-2"></span>Export Flights to CSV
                     </button>
                 </div>
                 <!-- ========== MENU: ADD MISSING AIRPORT ========== -->
                 <!-- Add Missing Airport Section -->
                 <div class="section" data-section-id="add-missing-airport">
-                    <button id="toggle-missing-airport-btn" class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 flex items-center justify-between">
+                    <button id="toggle-missing-airport-btn" class="btn-gradient w-full flex items-center justify-between">
                         <span class="flex items-center">
                             <span data-icon="map-marker-alt" class="mr-2"></span>Add Missing Airport
                         </span>
@@ -245,7 +245,7 @@
                         <input type="number" step="any" id="missing-airport-lon" placeholder="e.g., -79.6248" class="border p-1 w-full rounded-md">
                         <label class="block text-sm font-medium text-gray-700">Airport Name:</label>
                         <input type="text" id="missing-airport-name" placeholder="e.g., Toronto Pearson International Airport" class="border p-1 w-full rounded-md">
-                        <button id="add-missing-airport" class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 flex items-center">
+                        <button id="add-missing-airport" class="btn-gradient w-full flex items-center justify-center">
                             <span data-icon="plus-circle" class="mr-2"></span>Add Airport
                         </button>
                     </div>
@@ -270,10 +270,10 @@
                             <h2 class="text-lg font-semibold text-gray-800">Map Logbook Columns</h2>
                             <p class="text-sm text-gray-600">The logbook format was not automatically recognized. Please click on the column headers below to specify Departure (FROM) and Arrival (TO).</p>
                             <div id="logbook-preview-non-csv" class="max-h-40 overflow-y-auto bg-white p-2 rounded-md shadow-sm border border-gray-200"></div>
-                            <button id="confirm-mapping-non-csv" class="w-full bg-green-600 text-white p-2 rounded-md hover:bg-green-700 flex items-center">
+                            <button id="confirm-mapping-non-csv" class="btn-gradient w-full flex items-center justify-center">
                                 <span data-icon="check" class="mr-2"></span>Confirm Mapping
                             </button>
-                            <button id="cancel-mapping-non-csv" class="w-full bg-gray-600 text-white p-2 rounded-md hover:bg-gray-700 flex items-center">
+                            <button id="cancel-mapping-non-csv" class="btn-gradient w-full flex items-center justify-center">
                                 <span data-icon="times" class="mr-2"></span>Cancel
                             </button>
                         </div>
@@ -301,13 +301,13 @@
                             <div id="logbook-preview-csv" class="max-h-40 overflow-y-auto bg-white p-2 rounded-md shadow-sm border border-gray-200"></div>
                             <div id="field-mappings" class="space-y-2"></div>
                             <div class="flex justify-between">
-                                <button id="prev-row" class="bg-gray-600 text-white p-2 rounded-md hover:bg-gray-700">Previous Row</button>
-                                <button id="next-row" class="bg-gray-600 text-white p-2 rounded-md hover:bg-gray-700">Next Row</button>
+                                <button id="prev-row" class="btn-gradient">Previous Row</button>
+                                <button id="next-row" class="btn-gradient">Next Row</button>
                             </div>
-                            <button id="confirm-mapping-csv" class="w-full bg-green-600 text-white p-2 rounded-md hover:bg-green-700 flex items-center">
+                            <button id="confirm-mapping-csv" class="btn-gradient w-full flex items-center justify-center">
                                 <span data-icon="check" class="mr-2"></span>Import
                             </button>
-                            <button id="cancel-mapping-csv" class="w-full bg-gray-600 text-white p-2 rounded-md hover:bg-gray-700 flex items-center">
+                            <button id="cancel-mapping-csv" class="btn-gradient w-full flex items-center justify-center">
                                 <span data-icon="times" class="mr-2"></span>Cancel
                             </button>
                         </div>
@@ -317,11 +317,11 @@
         </div>
     </div>
     <!-- Reorder Menu Overlay -->
-    <div id="reorder-menu-overlay" class="fixed top-0 right-0 h-full w-80 bg-white shadow-lg z-1100 transform translate-x-full transition-transform duration-300 overflow-y-auto"> <!-- z-1100: reorder-menu-overlay z-index -->
+    <div id="reorder-menu-overlay" class="sidebar-glass fixed top-0 right-0 h-full w-80 z-1100 transform translate-x-full transition-transform duration-300 overflow-y-auto"> <!-- z-1100: reorder-menu-overlay z-index -->
         <div class="p-6 border-b border-gray-200">
             <div class="flex justify-between items-center">
                 <h2 class="text-xl font-bold text-gray-800">Reorder Menu</h2>
-                <button id="close-reorder-menu" class="text-gray-600 hover:text-gray-800">
+                <button id="close-reorder-menu" class="btn-gradient text-sm px-3 py-1 rounded-md">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
