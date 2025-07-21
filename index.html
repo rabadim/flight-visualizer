@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
     <title>Pilot Flight Path Visualizer</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -224,30 +225,32 @@
                 <!-- ========== MENU: ADD MISSING AIRPORT ========== -->
                 <!-- Add Missing Airport Section -->
                 <div class="section" data-section-id="add-missing-airport">
-                    <button id="toggle-missing-airport-btn" class="btn-gradient w-full flex items-center justify-between">
-                        <span class="flex items-center">
-                            <span data-icon="map-marker-alt" class="mr-2"></span>Add Missing Airport
-                        </span>
-                        <span data-chevron="missing-airport" class="fas fa-chevron-right transition-transform duration-200"></span>
-                    </button>
-                    <div id="missing-airport-form-container" class="hidden mt-2 space-y-2">
-                        <label class="block text-sm font-medium text-gray-700">Airport Code (IATA):</label>
-                        <input type="text" id="missing-airport-iata" placeholder="e.g., YYZ" class="border p-1 w-full rounded-md">
-                        <label class="block text-sm font-medium text-gray-700">ICAO Code:</label>
-                        <input type="text" id="missing-airport-icao" placeholder="e.g., CYYZ" class="border p-1 w-full rounded-md">
-                        <label class="block text-sm font-medium text-gray-700">Identifier (if any):</label>
-                        <input type="text" id="missing-airport-identifier" placeholder="e.g., YYZ" class="border p-1 w-full rounded-md">
-                        <label class="block text-sm font-medium text-gray-700">Country Code:</label>
-                        <input type="text" id="missing-airport-country" placeholder="e.g., CA" class="border p-1 w-full rounded-md">
-                        <label class="block text-sm font-medium text-gray-700">Latitude:</label>
-                        <input type="number" step="any" id="missing-airport-lat" placeholder="e.g., 43.6777" class="border p-1 w-full rounded-md">
-                        <label class="block text-sm font-medium text-gray-700">Longitude:</label>
-                        <input type="number" step="any" id="missing-airport-lon" placeholder="e.g., -79.6248" class="border p-1 w-full rounded-md">
-                        <label class="block text-sm font-medium text-gray-700">Airport Name:</label>
-                        <input type="text" id="missing-airport-name" placeholder="e.g., Toronto Pearson International Airport" class="border p-1 w-full rounded-md">
-                        <button id="add-missing-airport" class="btn-gradient w-full flex items-center justify-center">
-                            <span data-icon="plus-circle" class="mr-2"></span>Add Airport
+                    <div class="collapsible-section">
+                        <button id="toggle-missing-airport-btn" class="btn-gradient w-full flex items-center justify-between">
+                            <span class="flex items-center">
+                                <span data-icon="map-marker-alt" class="mr-2"></span>Add Missing Airport
+                            </span>
+                            <span data-chevron="missing-airport" class="fas fa-chevron-right transition-transform duration-200"></span>
                         </button>
+                        <div id="missing-airport-form-container" class="hidden mt-2 space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">Airport Code (IATA):</label>
+                            <input type="text" id="missing-airport-iata" placeholder="e.g., YYZ" class="border p-1 w-full rounded-md">
+                            <label class="block text-sm font-medium text-gray-700">ICAO Code:</label>
+                            <input type="text" id="missing-airport-icao" placeholder="e.g., CYYZ" class="border p-1 w-full rounded-md">
+                            <label class="block text-sm font-medium text-gray-700">Identifier (if any):</label>
+                            <input type="text" id="missing-airport-identifier" placeholder="e.g., YYZ" class="border p-1 w-full rounded-md">
+                            <label class="block text-sm font-medium text-gray-700">Country Code:</label>
+                            <input type="text" id="missing-airport-country" placeholder="e.g., CA" class="border p-1 w-full rounded-md">
+                            <label class="block text-sm font-medium text-gray-700">Latitude:</label>
+                            <input type="number" step="any" id="missing-airport-lat" placeholder="e.g., 43.6777" class="border p-1 w-full rounded-md">
+                            <label class="block text-sm font-medium text-gray-700">Longitude:</label>
+                            <input type="number" step="any" id="missing-airport-lon" placeholder="e.g., -79.6248" class="border p-1 w-full rounded-md">
+                            <label class="block text-sm font-medium text-gray-700">Airport Name:</label>
+                            <input type="text" id="missing-airport-name" placeholder="e.g., Toronto Pearson International Airport" class="border p-1 w-full rounded-md">
+                            <button id="add-missing-airport" class="btn-gradient w-full flex items-center justify-center">
+                                <span data-icon="plus-circle" class="mr-2"></span>Add Airport
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <!-- ========== MENU: FLIGHT STATS ========== -->

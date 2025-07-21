@@ -314,10 +314,6 @@ window.addEventListener('load', () => {
         });
     };
 
-    toggleBtn('toggle-form-btn', 'flight-form-container', 'form', 'Add Flight', 'Hide Form');
-    toggleBtn('toggle-logbook-btn', 'logbook-upload-container', 'logbook', 'Upload Logbook', 'Hide Logbook Upload');
-    toggleBtn('toggle-date-filter-btn', 'date-filter-container', 'date-filter', 'Filter by Date Range', 'Hide Date Filter');
-    toggleBtn('toggle-filter-flights-btn', 'filter-flights-container', 'filter-flights', 'Filter Flights', 'Hide Flight Filters');
 
     document.getElementById('submit-flight').addEventListener('click', event => {
         event.preventDefault();
@@ -677,6 +673,75 @@ window.addEventListener('load', () => {
 
         loadSectionOrder();
     }
+    // Accordion behavior with explicit mapping of button IDs to container IDs and labels
+    const accordionConfig = {
+        'toggle-form-btn': {
+            containerId: 'flight-form-container',
+            labels: ['Add Flight', 'Hide Form']
+        },
+        'toggle-logbook-btn': {
+            containerId: 'logbook-upload-container',
+            labels: ['Upload Logbook', 'Hide Logbook Upload']
+        },
+        'toggle-date-filter-btn': {
+            containerId: 'date-filter-container',
+            labels: ['Filter by Date Range', 'Hide Date Filter']
+        },
+        'toggle-filter-flights-btn': {
+            containerId: 'filter-flights-container',
+            labels: ['Filter Flights', 'Hide Flight Filters']
+        }
+    };
+
+    document.querySelectorAll('.collapsible-section > button').forEach(button => {
+        const config = accordionConfig[button.id];
+        if (!config) return;
+
+        const { containerId, labels } = config;
+        const thisContainer = document.getElementById(containerId);
+        const chevron = button.querySelector('span[data-chevron]');
+        const label = button.querySelector('.text-label');
+
+        if (!thisContainer) {
+            console.warn(`Accordion container not found: ${containerId}`);
+            return;
+        }
+
+        button.addEventListener('click', function () {
+            const isNowExpanded = !thisContainer.classList.contains('hidden');
+
+            // Close all others
+            Object.entries(accordionConfig).forEach(([btnId, cfg]) => {
+                if (btnId === button.id) return;
+                const otherBtn = document.getElementById(btnId);
+                const otherContainer = document.getElementById(cfg.containerId);
+                const otherChevron = otherBtn?.querySelector('span[data-chevron]');
+                const otherLabel = otherBtn?.querySelector('.text-label');
+                if (otherBtn && otherContainer) {
+                    otherBtn.classList.remove('expanded');
+                    otherChevron?.classList.remove('fa-chevron-down');
+                    otherChevron?.classList.add('fa-chevron-right');
+                    otherContainer.classList.add('hidden');
+                    if (cfg.labels && otherLabel) otherLabel.textContent = cfg.labels[0];
+                }
+            });
+
+            // Toggle this one
+            if (isNowExpanded) {
+                button.classList.remove('expanded');
+                chevron?.classList.remove('fa-chevron-down');
+                chevron?.classList.add('fa-chevron-right');
+                thisContainer.classList.add('hidden');
+                if (labels && label) label.textContent = labels[0];
+            } else {
+                button.classList.add('expanded');
+                chevron?.classList.remove('fa-chevron-right');
+                chevron?.classList.add('fa-chevron-down');
+                thisContainer.classList.remove('hidden');
+                if (labels && label) label.textContent = labels[1];
+            }
+        });
+    });
 });
 
 // --- Functions and Parsing Logic ---

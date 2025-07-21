@@ -7,6 +7,12 @@
   --z-tooltip: 1300;
 }
 
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+  }
+}
+
 body {
     background-image: url('https://source.unsplash.com/1600x900/?sky,clouds');
     background-size: cover;
@@ -218,6 +224,31 @@ body {
     transform: rotate(90deg);
 }
 
+.collapsible-section > div {
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+  overflow: hidden;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(240,248,255,0.9));
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-top: 0.5rem;
+}
+
+.collapsible-section > div.hidden {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.collapsible-section > div:not(.hidden) {
+  max-height: 1000px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.dark-mode .collapsible-section > div {
+  background: linear-gradient(to bottom, rgba(57,62,70,0.95), rgba(34,40,49,0.9));
+}
+
 /* Icon Styling */
 [data-icon]::before {
     font-family: "Font Awesome 5 Free";
@@ -273,6 +304,16 @@ body {
     background-color: #a0aec0;
 }
 
+/* Added styles for expanded collapsible-section buttons */
+.collapsible-section button.expanded {
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.3);
+  background-color: #3b82f6;
+}
+
+.dark-mode .collapsible-section button.expanded {
+  background-color: #2563eb;
+}
+
 /* Tooltip Styling */
 #menu-overlay [title] {
     position: relative;
@@ -297,7 +338,7 @@ body {
 /* Improved Responsiveness */
 @media (max-width: 640px) {
     #map {
-        height: calc(100vh - 60px);
+        height: calc(100vh - 120px);
     }
 
     #menu-overlay {
@@ -419,6 +460,13 @@ button:focus-visible {
   box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
 }
 .btn-gradient:active {
+  transform: scale(0.98);
+}
+.dark-mode .btn-gradient:hover {
+  box-shadow: 0 6px 20px rgba(147, 197, 253, 0.6);
+  transform: translateY(-2px);
+}
+.dark-mode .btn-gradient:active {
   transform: scale(0.98);
 }
 
