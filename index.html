@@ -28,6 +28,8 @@
 <main class="flex-1 flex flex-col">
     <!-- Backdrop for Menu Overlay -->
     <div id="menu-backdrop" class="fixed inset-0 bg-black bg-opacity-50 z-900 hidden"></div> <!-- z-900: menu-backdrop z-index -->
+    <!-- Liquid Motion Overlay -->
+    <div id="liquid-overlay" class="liquid-overlay pointer-events-none z-[899] hidden"></div>
     <!-- Loading Indicator for Download -->
     <div id="loading-indicator" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-1200 hidden"> <!-- z-1200: loading-indicator z-index -->
         <div class="bg-white p-4 rounded-md shadow-lg text-center">
@@ -68,18 +70,11 @@
     </button>
     <!-- Menu Overlay -->
     <div id="menu-overlay" class="sidebar-glass fixed top-0 right-0 h-full w-80 z-1000 transform translate-x-full transition-transform duration-300 overflow-y-auto"> <!-- z-1000: menu-overlay z-index -->
-        <!-- Sticky Header -->
-        <div class="menu-header p-6 border-b border-gray-200">
-            <div class="flex justify-between items-center">
-                <img src="logo.png" alt="Pilot Flight Visualizer Logo" class="w-24">
-            </div>
-            <h1 class="text-2xl font-bold text-gray-800 mt-2">Flight Visualizer</h1>
-        </div>
         <!-- Menu Content -->
         <div class="p-6 relative">
-            <!-- Edit Menu Button -->
-            <button id="edit-menu-btn" class="fixed bottom-4 right-4 bg-purple-600 text-white p-2 rounded-full shadow-lg hover:bg-purple-700 z-1100" title="Edit Menu Order">
-                <span data-icon="cog" class="text-lg"></span>
+            <!-- Reorder Menu Button -->
+            <button id="edit-menu-btn" class="fixed bottom-4 right-4 bg-white text-gray-700 p-3 rounded-full shadow hover:bg-gray-200 z-1100" title="Reorder Menu Sections">
+                <span class="fas fa-bars text-base"></span>
             </button>
             <!-- Menu Sections Container -->
             <div id="menu-sections" class="space-y-6">
@@ -143,7 +138,7 @@
                     <button id="theme-toggle" class="btn-gradient w-full mt-2 flex items-center justify-center">
                         <span data-icon="adjust" class="mr-2"></span>Toggle Dark Mode
                     </button>
-                    <button id="toggle-local-flights-btn" class="btn-gradient w-full mt-2 flex items-center justify-center" title="Show or hide flights that start and end at the same airport">
+                    <button id="toggle-local-flights-btn" class="btn-gradient w-full mt-2 flex items-center justify-center">
                         <span data-icon="eye" class="mr-2"></span>Show/Hide Local Flights
                     </button>
                 </div>
@@ -155,7 +150,7 @@
                     </h3>
                     <!-- Filter by Date Range -->
                     <div class="collapsible-section">
-                        <button id="toggle-date-filter-btn" class="btn-gradient w-full flex items-center justify-between" title="Show flights within a specific date range">
+                        <button id="toggle-date-filter-btn" class="btn-gradient w-full flex items-center justify-between">
                             <span class="flex items-center">
                                 <span data-icon="calendar-alt" class="mr-2"></span>Filter by Date Range
                             </span>
@@ -173,7 +168,7 @@
                     </div>
                     <!-- Filter Flights -->
                     <div class="collapsible-section mt-2">
-                        <button id="toggle-filter-flights-btn" class="btn-gradient w-full flex items-center justify-between" title="Filter flights by departure or arrival airport and sort by various criteria">
+                        <button id="toggle-filter-flights-btn" class="btn-gradient w-full flex items-center justify-between">
                             <span class="flex items-center">
                                 <span data-icon="sort" class="mr-2"></span>Filter Flights
                             </span>
@@ -212,13 +207,13 @@
                     <button id="add-logbook" class="btn-gradient w-full flex items-center justify-center mt-2">
                         <span data-icon="plus" class="mr-2"></span>Add New Logbook
                     </button>
-                    <button id="clear-flights-btn" class="btn-gradient w-full mt-2 flex items-center justify-center" title="Remove all flights from the current logbook">
+                    <button id="clear-flights-btn" class="btn-gradient w-full mt-2 flex items-center justify-center">
                         <span data-icon="trash" class="mr-2"></span>Clear Flights
                     </button>
-                    <button id="download-btn" class="btn-gradient w-full mt-2 flex items-center justify-center" title="Download the current map as a PNG image">
+                    <button id="download-btn" class="btn-gradient w-full mt-2 flex items-center justify-center">
                         <span data-icon="download" class="mr-2"></span>Download Map
                     </button>
-                    <button id="export-flights-btn" class="btn-gradient w-full flex items-center justify-center mt-2" title="Download your flights as a CSV file">
+                    <button id="export-flights-btn" class="btn-gradient w-full flex items-center justify-center mt-2">
                         <span data-icon="file-export" class="mr-2"></span>Export Flights to CSV
                     </button>
                 </div>

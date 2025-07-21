@@ -293,12 +293,28 @@ window.addEventListener('load', () => {
     let isDownloading = false;
 
     const toggleMenu = () => {
+        // Enhanced overlay/liquid effect logic
+        const isOpen = menuOverlay.classList.contains('translate-x-full');
         menuOverlay.classList.toggle('translate-x-full');
         menuBackdrop.classList.toggle('hidden');
-        const isOpen = !menuOverlay.classList.contains('translate-x-full');
-        document.getElementById('menu-icon-open').classList.toggle('hidden', isOpen);
-        document.getElementById('menu-icon-close').classList.toggle('hidden', !isOpen);
-        menuToggle.setAttribute('aria-label', isOpen ? 'Close Menu' : 'Open Menu');
+
+        const liquidOverlay = document.getElementById('liquid-overlay');
+        if (isOpen) {
+            liquidOverlay.classList.remove('hidden');
+            requestAnimationFrame(() => liquidOverlay.classList.add('active'));
+        } else {
+            liquidOverlay.classList.remove('active');
+            setTimeout(() => {
+                if (!liquidOverlay.classList.contains('active')) {
+                    liquidOverlay.classList.add('hidden');
+                }
+            }, 250);
+        }
+
+        const actuallyOpen = !menuOverlay.classList.contains('translate-x-full');
+        document.getElementById('menu-icon-open').classList.toggle('hidden', actuallyOpen);
+        document.getElementById('menu-icon-close').classList.toggle('hidden', !actuallyOpen);
+        menuToggle.setAttribute('aria-label', actuallyOpen ? 'Close Menu' : 'Open Menu');
     };
 
     menuToggle.addEventListener('click', toggleMenu);
@@ -545,12 +561,18 @@ window.addEventListener('load', () => {
         if (['csv', 'pdf', 'txt', 'jpg', 'png', 'jpeg'].includes(fileExtension)) {
             const reader = new FileReader();
             if (fileExtension === 'csv' || fileExtension === 'txt') {
-                reader.onload = e => fileExtension === 'csv' ? parseCSV(e.target.result) : parseText(e.target.result);
+                reader.onload = e => {
+                    fileExtension === 'csv' ? parseCSV(e.target.result) : parseText(e.target.result);
+                    closeMenuOverlay();
+                };
                 reader.readAsText(file);
             } else if (fileExtension === 'pdf') {
-                parsePDF(file);
+                parsePDF(file).then(closeMenuOverlay);
             } else {
-                reader.onload = e => parseImage(e.target.result);
+                reader.onload = e => {
+                    parseImage(e.target.result);
+                    closeMenuOverlay();
+                };
                 reader.readAsDataURL(file);
             }
         } else {
@@ -559,6 +581,21 @@ window.addEventListener('load', () => {
 
         this.value = '';
     });
+// Helper to close the sidebar menu overlay
+function closeMenuOverlay() {
+    const menuOverlay = document.getElementById('menu-overlay');
+    const menuBackdrop = document.getElementById('menu-backdrop');
+    const menuToggle = document.getElementById('menu-toggle');
+    const liquidOverlay = document.getElementById('liquid-overlay');
+
+    menuOverlay.classList.add('translate-x-full');
+    menuBackdrop.classList.add('hidden');
+    liquidOverlay?.classList.remove('active');
+    setTimeout(() => liquidOverlay?.classList.add('hidden'), 250);
+    document.getElementById('menu-icon-open').classList.remove('hidden');
+    document.getElementById('menu-icon-close').classList.add('hidden');
+    menuToggle.setAttribute('aria-label', 'Open Menu');
+}
 
     fetch('airports.json')
         .then(response => response.json())
